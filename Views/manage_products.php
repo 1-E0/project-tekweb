@@ -3,13 +3,13 @@ session_start();
 require_once '../config/Database.php';
 require_once '../Controllers/ProductController.php';
 
-// Cek Login
+
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit;
 }
 
-// Ambil Data Toko
+
 $database = new Database();
 $db = $database->getConnection();
 $stmt = $db->prepare("SELECT * FROM shops WHERE user_id = ?");
@@ -25,13 +25,13 @@ $productController = new ProductController();
 $products = $productController->getProductsByShop($shop['id']);
 $stats = $productController->getShopStats($shop['id']);
 
-// Hitung Statistik
+
 $total_produk = count($products);
 $total_penjualan = $stats['sold']; 
 $total_pendapatan = $stats['revenue'];
 
 $nama = $_SESSION['nama'];
-$role = $_SESSION['role']; // Ambil role dari session
+$role = $_SESSION['role']; 
 ?>
 
 <!DOCTYPE html>
@@ -279,7 +279,6 @@ $role = $_SESSION['role']; // Ambil role dari session
 
     <script>
         $(document).ready(function(){
-            // Dropdown Toggle (Fix: Klik, Bukan Hover)
             $('#navProfileTrigger').click(function(e){
                 e.stopPropagation();
                 $('#navProfileDropdown').slideToggle(200);
@@ -295,7 +294,7 @@ $role = $_SESSION['role']; // Ambil role dari session
                 e.stopPropagation();
             });
 
-            // Search
+        
             $("#searchInput").on("keyup", function() {
                 var value = $(this).val().toLowerCase();
                 $("tbody tr").filter(function() {
@@ -303,7 +302,7 @@ $role = $_SESSION['role']; // Ambil role dari session
                 });
             });
 
-            // AJAX Forms
+            
             $('#formAddProduct, #formEditProduct').on('submit', function(e){
                 e.preventDefault();
                 var formData = new FormData(this);
