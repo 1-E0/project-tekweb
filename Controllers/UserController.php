@@ -11,7 +11,7 @@ class UserController {
     }
 
     public function getUser($id) {
-        $query = "SELECT id, username, nama_lengkap, email, role FROM " . $this->table . " WHERE id = :id LIMIT 1";
+        $query = "SELECT id, username, nama_lengkap, email, role, balance FROM " . $this->table . " WHERE id = :id LIMIT 1";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':id', $id);
         $stmt->execute();
@@ -19,7 +19,6 @@ class UserController {
     }
 
     public function updateProfile($id, $nama, $email, $username) {
-        
         $checkQuery = "SELECT id FROM " . $this->table . " WHERE (username = :username OR email = :email) AND id != :id";
         $stmtCheck = $this->conn->prepare($checkQuery);
         $stmtCheck->bindParam(':username', $username);
@@ -47,7 +46,6 @@ class UserController {
     }
 
     public function updatePassword($id, $oldPass, $newPass) {
-        
         $query = "SELECT password FROM " . $this->table . " WHERE id = :id LIMIT 1";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':id', $id);
@@ -68,6 +66,20 @@ class UserController {
             return json_encode(['status' => 'success', 'message' => 'Password berhasil diubah!']);
         }
         return json_encode(['status' => 'error', 'message' => 'Gagal mengubah password.']);
+    }
+
+    public function topUp($id, $amount) {
+        if ($amount <= 0) return json_encode(['status' => 'error', 'message' => 'Nominal tidak valid']);
+
+        $query = "UPDATE " . $this->table . " SET balance = balance + :amount WHERE id = :id";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':amount', $amount);
+        $stmt->bindParam(':id', $id);
+
+        if($stmt->execute()){
+            return json_encode(['status' => 'success', 'message' => 'Top Up Berhasil']);
+        }
+        return json_encode(['status' => 'error', 'message' => 'Gagal Top Up']);
     }
 }
 ?>

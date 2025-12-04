@@ -3,12 +3,10 @@ session_start();
 require_once '../config/Database.php';
 require_once '../Controllers/ProductController.php';
 
-
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit;
 }
-
 
 $database = new Database();
 $db = $database->getConnection();
@@ -25,10 +23,11 @@ $productController = new ProductController();
 $products = $productController->getProductsByShop($shop['id']);
 $stats = $productController->getShopStats($shop['id']);
 
-
 $total_produk = count($products);
 $total_penjualan = $stats['sold']; 
 $total_pendapatan = $stats['revenue'];
+
+$total_rating = $stats['rating'] > 0 ? number_format($stats['rating'], 1) : '0';
 
 $nama = $_SESSION['nama'];
 $role = $_SESSION['role']; 
@@ -92,7 +91,7 @@ $role = $_SESSION['role'];
                         </div>
 
                         <div class="p-2 space-y-1">
-                            <a href="#" class="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-blue-600 rounded-lg transition group">
+                            <a href="settings.php?from=shop" class="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-blue-600 rounded-lg transition group">
                                 <div class="w-6 text-center"><i class="fas fa-cog text-slate-400 group-hover:text-blue-500"></i></div>
                                 Pengaturan
                             </a>
@@ -123,7 +122,7 @@ $role = $_SESSION['role'];
             </div>
             <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 card-stat">
                 <div class="w-12 h-12 rounded-lg bg-yellow-50 text-yellow-600 flex items-center justify-center text-xl"><i class="fas fa-star"></i></div>
-                <div><p class="text-slate-500 text-xs font-semibold uppercase">Rating Toko</p><h3 class="text-2xl font-bold text-slate-800">4.9</h3></div>
+                <div><p class="text-slate-500 text-xs font-semibold uppercase">Rating Toko</p><h3 class="text-2xl font-bold text-slate-800"><?php echo $total_rating; ?></h3></div>
             </div>
             <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 card-stat">
                 <div class="w-12 h-12 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center text-xl"><i class="fas fa-wallet"></i></div>

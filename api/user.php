@@ -37,5 +37,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_POST['new_password']
         );
     }
+    elseif ($action == 'topup') {
+        echo $userObj->topUp($userId, $_POST['amount']);
+    }
 }
 ?>

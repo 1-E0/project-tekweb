@@ -20,8 +20,23 @@ class ProductController {
     }
 
     
+    public function getPublicProduct($id) {
+        $query = "SELECT p.*, s.nama_toko, s.alamat_toko, c.nama_kategori,
+                  (SELECT COALESCE(SUM(oi.quantity), 0) FROM order_items oi WHERE oi.product_id = p.id) as terjual,
+                  (SELECT COALESCE(AVG(rating), 0) FROM product_reviews WHERE product_id = p.id) as rating_produk,
+                  (SELECT COUNT(*) FROM product_reviews WHERE product_id = p.id) as jumlah_review
+                  FROM " . $this->table . " p 
+                  JOIN shops s ON p.shop_id = s.id 
+                  JOIN categories c ON p.category_id = c.id
+                  WHERE p.id = :id LIMIT 1";
+        
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':id', $id);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
     public function getProductsByShop($shopId) {
-       
         $query = "SELECT p.*, c.nama_kategori,
                   (SELECT COALESCE(SUM(oi.quantity), 0) 
                    FROM order_items oi 
@@ -37,7 +52,6 @@ class ProductController {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    
     public function getShopStats($shopId) {
         $query = "SELECT 
                     SUM(oi.subtotal) as total_revenue,
@@ -52,10 +66,21 @@ class ProductController {
         $stmt->bindParam(':shop_id', $shopId);
         $stmt->execute();
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $queryRating = "SELECT AVG(r.rating) as avg_rating
+                        FROM product_reviews r
+                        JOIN products p ON r.product_id = p.id
+                        WHERE p.shop_id = :shop_id";
+        
+        $stmtRating = $this->conn->prepare($queryRating);
+        $stmtRating->bindParam(':shop_id', $shopId);
+        $stmtRating->execute();
+        $ratingResult = $stmtRating->fetch(PDO::FETCH_ASSOC);
         
         return [
             'revenue' => $result['total_revenue'] ?? 0,
-            'sold' => $result['total_sold'] ?? 0
+            'sold' => $result['total_sold'] ?? 0,
+            'rating' => $ratingResult['avg_rating'] ?? 0
         ];
     }
 

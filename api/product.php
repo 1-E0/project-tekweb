@@ -3,7 +3,7 @@ session_start();
 include_once '../Controllers/ProductController.php';
 header('Content-Type: application/json');
 
-// Cek Login
+
 if (!isset($_SESSION['user_id'])) {
     echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
     exit;
@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
     } 
     elseif ($action == 'update') {
-        // Handle update
+        
         echo $productObj->updateProduct(
             $_POST['product_id'],
             $shopId,

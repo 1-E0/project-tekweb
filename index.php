@@ -1,5 +1,6 @@
 <?php
 session_start();
+
 require_once 'config/Database.php';
 
 $is_logged_in = false;
@@ -34,7 +35,6 @@ if (isset($_SESSION['user_id'])) {
 $database = new Database();
 $db = $database->getConnection();
 
-
 $query_produk = "SELECT p.*, s.nama_toko FROM products p JOIN shops s ON p.shop_id = s.id ORDER BY p.created_at DESC LIMIT 12";
 $stmt_produk = $db->prepare($query_produk);
 $stmt_produk->execute();
@@ -44,7 +44,6 @@ $query_kategori = "SELECT * FROM categories ORDER BY nama_kategori ASC LIMIT 8";
 $stmt_kategori = $db->prepare($query_kategori);
 $stmt_kategori->execute();
 $categories = $stmt_kategori->fetchAll(PDO::FETCH_ASSOC);
-
 
 function getCategoryIcon($name) {
     $name = strtolower($name);
@@ -75,16 +74,12 @@ function getCategoryIcon($name) {
     
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #ffffff; }
-        
-    
         .hero-text-highlight {
             background: linear-gradient(120deg, #dbeafe 0%, #dbeafe 100%);
             background-repeat: no-repeat;
             background-size: 100% 30%;
             background-position: 0 85%;
         }
-        
-       
         .bg-hero-gradient {
             background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%);
         }
@@ -113,10 +108,8 @@ function getCategoryIcon($name) {
 
             <div class="flex items-center gap-4 flex-shrink-0">
                 <?php if ($is_logged_in): ?>
-                    <a href="#" class="text-slate-500 hover:text-blue-600 p-2 relative transition">
-                        <a href="views/cart.php" class="text-slate-500 hover:text-blue-600 p-2 relative transition">
+                    <a href="views/cart.php" class="text-slate-500 hover:text-blue-600 p-2 relative transition">
                         <i class="fas fa-shopping-cart text-xl"></i>
-                        
                         <span class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">0</span>
                     </a>
                     <div class="h-8 w-px bg-slate-200 hidden md:block"></div>
@@ -142,7 +135,9 @@ function getCategoryIcon($name) {
                                 <?php elseif($role != 'admin'): ?>
                                     <a href="views/create_shop.php" class="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition font-medium"><i class="fas fa-store w-5"></i> Buka Toko Gratis</a>
                                 <?php endif; ?>
-                                <a href="views/settings.php" class="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition font-medium"><i class="fas fa-cog w-5"></i> Pengaturan</a>
+                                
+                                <a href="views/settings.php?from=home" class="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition font-medium"><i class="fas fa-cog w-5"></i> Pengaturan</a>
+                                
                                 <div class="h-px bg-slate-100 my-1 mx-2"></div>
                                 <a href="logout.php" class="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-xl transition font-medium"><i class="fas fa-sign-out-alt w-5"></i> Keluar</a>
                             </div>
@@ -207,7 +202,7 @@ function getCategoryIcon($name) {
             <?php if (count($products) > 0): ?>
                 <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
                     <?php foreach($products as $prod): ?>
-                        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition duration-300 group cursor-pointer flex flex-col h-full" onclick="addToCart(<?php echo $prod['id']; ?>)">
+                        <a href="views/detail.php?id=<?php echo $prod['id']; ?>" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition duration-300 group cursor-pointer flex flex-col h-full">
                             <div class="h-56 bg-slate-50 relative overflow-hidden">
                                 <img src="<?php echo $prod['gambar'] ? 'assets/images/'.$prod['gambar'] : 'https://via.placeholder.com/300?text=No+Image'; ?>" 
                                      class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
@@ -233,7 +228,7 @@ function getCategoryIcon($name) {
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </a>
                     <?php endforeach; ?>
                 </div>
             <?php else: ?>
@@ -273,40 +268,6 @@ function getCategoryIcon($name) {
                 e.stopPropagation();
             });
         });
-
-        function addToCart(productId) {
-            if (!isLoggedIn) {
-                Swal.fire({
-                    icon: 'warning', title: 'Login Dulu', text: 'Silakan login untuk mulai belanja',
-                    showCancelButton: true, confirmButtonText: 'Login', cancelButtonText: 'Batal', confirmButtonColor: '#2563EB'
-                }).then((result) => {
-                    if (result.isConfirmed) window.location.href = 'views/login.php';
-                });
-                return; 
-            }
-            if (role === 'admin') {
-                Swal.fire('Info', 'Admin tidak bisa belanja.', 'info');
-                return;
-            }
-            
-    $.ajax({
-        url: 'api/cart.php',
-        type: 'POST',
-        data: { action: 'add', product_id: productId },
-        dataType: 'json',
-        success: function(response) {
-            if(response.status === 'success') {
-                Swal.fire({
-                    icon: 'success', title: 'Berhasil', text: 'Produk masuk keranjang',
-                    timer: 1000, showConfirmButton: false, position: 'bottom-end', toast: true
-                });
-                
-            } else {
-                Swal.fire('Gagal', 'Terjadi kesalahan', 'error');
-            }
-        }
-    });
-}
     </script>
 </body>
 </html>

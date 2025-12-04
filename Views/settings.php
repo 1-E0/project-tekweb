@@ -9,6 +9,22 @@ if (!isset($_SESSION['user_id'])) {
 
 $nama = $_SESSION['nama'];
 $role = $_SESSION['role'];
+$user_id = $_SESSION['user_id'];
+
+$from = $_GET['from'] ?? 'home';
+$back_url = '../index.php';
+$back_label = 'Ke Halaman Utama';
+
+if ($from == 'shop') {
+    $back_url = 'manage_products.php';
+    $back_label = 'Ke Toko Saya';
+} elseif ($from == 'browse') {
+    $back_url = 'browse.php';
+    $back_label = 'Ke Jelajah Produk';
+} elseif ($from == 'cart') {
+    $back_url = 'cart.php';
+    $back_label = 'Ke Keranjang';
+}
 ?>
 
 <!DOCTYPE html>
@@ -17,35 +33,32 @@ $role = $_SESSION['role'];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pengaturan Akun</title>
-    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: #F8F9FA; }
-    </style>
+    <style>body { font-family: 'Inter', sans-serif; background-color: #F8F9FA; }</style>
 </head>
 <body class="text-slate-800">
 
     <nav class="bg-white shadow-sm sticky top-0 z-50">
         <div class="container mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
-            <a href="../index.php" class="flex items-center gap-2 group">
-                <div class="bg-blue-600 text-white p-2 rounded-lg transition">
+            <a href="<?php echo $back_url; ?>" class="flex items-center gap-2 group">
+                <div class="bg-blue-600 text-white p-2 rounded-lg transition group-hover:bg-blue-700">
                     <i class="fas fa-arrow-left"></i>
                 </div>
-                <span class="text-lg font-bold text-slate-800">Kembali</span>
+                <div class="flex flex-col">
+                    <span class="text-xs text-slate-500 font-medium">Kembali</span>
+                    <span class="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition"><?php echo $back_label; ?></span>
+                </div>
             </a>
-            
             <div class="font-bold text-lg text-slate-700">Pengaturan Akun</div>
             <div class="w-10"></div> 
         </div>
     </nav>
 
     <div class="container mx-auto px-4 sm:px-6 py-8 max-w-4xl">
-        
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             
             <div class="md:col-span-1">
@@ -62,6 +75,23 @@ $role = $_SESSION['role'];
 
             <div class="md:col-span-2 space-y-6">
                 
+                <div class="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl shadow-lg p-6 text-white relative overflow-hidden">
+                    <div class="relative z-10">
+                        <p class="text-blue-100 text-sm font-medium mb-1">Saldo Saya</p>
+                        <h2 class="text-3xl font-bold mb-4">Rp <?php 
+                            $db = (new Database())->getConnection();
+                            $stmt = $db->prepare("SELECT balance FROM users WHERE id = ?");
+                            $stmt->execute([$user_id]);
+                            $saldo = $stmt->fetchColumn();
+                            echo number_format($saldo, 0, ',', '.'); 
+                        ?></h2>
+                        <button onclick="openTopUp()" class="bg-white text-blue-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-50 transition shadow-sm">
+                            <i class="fas fa-plus-circle mr-1"></i> Isi Saldo
+                        </button>
+                    </div>
+                    <i class="fas fa-wallet absolute -bottom-4 -right-4 text-9xl text-white opacity-10"></i>
+                </div>
+
                 <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
                     <h3 class="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2">
                         <i class="fas fa-user-edit text-blue-600"></i> Edit Profil
@@ -113,14 +143,12 @@ $role = $_SESSION['role'];
                         </div>
                     </form>
                 </div>
-
             </div>
         </div>
     </div>
 
     <script>
     $(document).ready(function() {
-        
         loadUserData();
 
         function loadUserData() {
@@ -141,9 +169,7 @@ $role = $_SESSION['role'];
                 success: function(response) {
                     if(response.status === 'success') {
                         Swal.fire({ icon: 'success', title: 'Berhasil', text: response.message, timer: 1500, showConfirmButton: false }).then(() => location.reload());
-                    } else {
-                        Swal.fire('Gagal', response.message, 'error');
-                    }
+                    } else { Swal.fire('Gagal', response.message, 'error'); }
                 }
             });
         });
@@ -162,16 +188,36 @@ $role = $_SESSION['role'];
                 url: '../api/user.php', type: 'POST', data: $(this).serialize(), dataType: 'json',
                 success: function(response) {
                     if(response.status === 'success') {
-                        Swal.fire({ icon: 'success', title: 'Berhasil', text: response.message, timer: 1500, showConfirmButton: false }).then(() => {
-                            $('#formPassword')[0].reset();
-                        });
-                    } else {
-                        Swal.fire('Gagal', response.message, 'error');
-                    }
+                        Swal.fire({ icon: 'success', title: 'Berhasil', text: response.message, timer: 1500, showConfirmButton: false }).then(() => { $('#formPassword')[0].reset(); });
+                    } else { Swal.fire('Gagal', response.message, 'error'); }
                 }
             });
         });
     });
+
+    function openTopUp() {
+        Swal.fire({
+            title: 'Isi Saldo',
+            input: 'number',
+            inputLabel: 'Masukkan Nominal (Rp)',
+            inputPlaceholder: 'Contoh: 50000',
+            showCancelButton: true,
+            confirmButtonText: 'Top Up',
+            confirmButtonColor: '#2563EB',
+            preConfirm: (amount) => {
+                if (!amount) Swal.showValidationMessage('Nominal harus diisi');
+                return amount;
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.post('../api/user.php', { action: 'topup', amount: result.value }, function(res) {
+                    if(res.status === 'success') {
+                        Swal.fire('Berhasil', 'Saldo bertambah!', 'success').then(() => location.reload());
+                    }
+                }, 'json');
+            }
+        });
+    }
     </script>
 </body>
 </html>

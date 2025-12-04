@@ -26,7 +26,7 @@ class AuthController {
         $query = "INSERT INTO " . $this->table . " (nama_lengkap, username, email, password, role) VALUES (:nama, :username, :email, :password, 'member')";
         $stmt = $this->conn->prepare($query);
 
-        // encrypt password
+        
         $password_hash = password_hash($password, PASSWORD_BCRYPT);
 
         $stmt->bindParam(':nama', $nama);
@@ -41,7 +41,7 @@ class AuthController {
     }
 
     public function login($username, $password) {
-        $query = "SELECT id, username, password, nama_lengkap, role FROM " . $this->table . " WHERE username = :username LIMIT 0,1";
+        $query = "SELECT id, username, password, nama_lengkap, role, balance FROM " . $this->table . " WHERE username = :username LIMIT 0,1";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':username', $username);
         $stmt->execute();
@@ -53,7 +53,13 @@ class AuthController {
                 $_SESSION['user_id'] = $row['id'];
                 $_SESSION['nama'] = $row['nama_lengkap'];
                 $_SESSION['role'] = $row['role']; 
-                return json_encode(['status' => 'success', 'role' => $row['role'], 'message' => 'Login Berhasil!']);
+                
+                
+                return json_encode([
+                    'status' => 'success', 
+                    'role' => $row['role'], 
+                    'message' => 'Login Berhasil!'
+                ]);
             }
         }
         return json_encode(['status' => 'error', 'message' => 'Username atau Password salah!']);

@@ -80,7 +80,7 @@
             let btnText = $('#btnRegText');
             let btnLoading = $('#btnRegLoading');
             
-            // Loading State
+            
             btn.prop('disabled', true).addClass('bg-blue-400 cursor-not-allowed');
             btnText.addClass('hidden');
             btnLoading.removeClass('hidden');

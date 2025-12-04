@@ -1,29 +1,20 @@
-
-
 <!DOCTYPE html> 
 <html lang="id">
 <head> 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Masuk - Toko Online</title>
-    
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body class="bg-slate-50 h-screen flex items-center justify-center font-sans text-slate-700">
 
     <div class="bg-white p-8 md:p-10 rounded-xl shadow-xl w-full max-w-sm border border-slate-100 animate-enter">
-        
         <div class="text-center mb-8">
             <h1 class="text-2xl font-bold text-slate-800">LOGIN</h1>
-            
         </div>
         
         <form id="loginForm" class="space-y-5">
@@ -76,7 +67,6 @@
             let btnText = $('#btnText');
             let btnLoading = $('#btnLoading');
             
-            
             btn.prop('disabled', true).addClass('bg-blue-400 cursor-not-allowed');
             btnText.addClass('hidden');
             btnLoading.removeClass('hidden');
@@ -101,7 +91,11 @@
                         });
 
                         Toast.fire({ icon: 'success', title: 'Login Berhasil' }).then(() => {
-                            window.location.href = '../index.php';
+                            if (response.role === 'admin') {
+                                window.location.href = 'admin_dashboard.php';
+                            } else {
+                                window.location.href = '../index.php';
+                            }
                         });
                     } else {
                         Swal.fire({
@@ -127,4 +121,4 @@
     });
     </script>
 </body>
-</html> 
+</html>
