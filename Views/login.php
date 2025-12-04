@@ -1,6 +1,8 @@
-<!DOCTYPE html>
+
+
+<!DOCTYPE html> 
 <html lang="id">
-<head>
+<head> 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Masuk - Toko Online</title>
@@ -60,7 +62,7 @@
         <div class="mt-8 text-center">
             <p class="text-sm text-slate-500">
                 Belum punya akun? 
-                <a href="register.php" class="text-blue-600 font-semibold hover:text-blue-800 transition">Daftar sekarang</a>
+                <a href="register.php" class="text-blue-600 font-semibold hover:text-blue-800 transition">Register</a>
             </p>
         </div>
     </div>
@@ -125,4 +127,4 @@
     });
     </script>
 </body>
-</html>
+</html> 

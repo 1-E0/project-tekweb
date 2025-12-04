@@ -66,7 +66,7 @@
         
         <div class="mt-6 text-center border-t border-slate-100 pt-4">
             <p class="text-sm text-slate-500">
-                Sudah punya akun? <a href="login.php" class="text-blue-600 font-semibold hover:text-blue-800 transition">Masuk disini</a>
+                Sudah punya akun? <a href="login.php" class="text-blue-600 font-semibold hover:text-blue-800 transition">Login</a>
             </p>
         </div>
     </div>
