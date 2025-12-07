@@ -10,32 +10,60 @@ class CartController {
         $this->conn = $database->getConnection();
     }
 
-    
-    public function addToCart($userId, $productId) {
+   
+    public function addToCart($userId, $productId, $qty = 1) {
         
+        
+        $stockQuery = "SELECT stok FROM products WHERE id = :pid";
+        $stockStmt = $this->conn->prepare($stockQuery);
+        $stockStmt->execute([':pid' => $productId]);
+        $productStock = $stockStmt->fetchColumn();
+
+        if ($productStock === false) {
+             return json_encode(['status' => 'error', 'message' => 'Produk tidak ditemukan.']);
+        }
+        if ($productStock <= 0) {
+             return json_encode(['status' => 'error', 'message' => 'Stok produk habis.']);
+        }
+
         $check = "SELECT id, quantity FROM " . $this->table . " WHERE user_id = :uid AND product_id = :pid";
         $stmt = $this->conn->prepare($check);
         $stmt->execute([':uid' => $userId, ':pid' => $productId]);
 
         if ($stmt->rowCount() > 0) {
-           
+            
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            $newQty = $row['quantity'] + 1;
+            $currentQty = $row['quantity'];
+            $newQty = $currentQty + $qty;
+
+           
+            if ($newQty > $productStock) {
+                return json_encode(['status' => 'error', 'message' => 'Stok tidak mencukupi. Sisa stok: ' . $productStock]);
+            }
+
             $update = "UPDATE " . $this->table . " SET quantity = :qty WHERE id = :id";
             $stmtUpdate = $this->conn->prepare($update);
-            $stmtUpdate->execute([':qty' => $newQty, ':id' => $row['id']]);
+            if($stmtUpdate->execute([':qty' => $newQty, ':id' => $row['id']])) {
+                return json_encode(['status' => 'success', 'message' => 'Jumlah produk diperbarui']);
+            }
         } else {
             
-            $insert = "INSERT INTO " . $this->table . " (user_id, product_id, quantity) VALUES (:uid, :pid, 1)";
+            if ($qty > $productStock) {
+                return json_encode(['status' => 'error', 'message' => 'Stok tidak mencukupi. Sisa stok: ' . $productStock]);
+            }
+
+            $insert = "INSERT INTO " . $this->table . " (user_id, product_id, quantity) VALUES (:uid, :pid, :qty)";
             $stmtInsert = $this->conn->prepare($insert);
-            $stmtInsert->execute([':uid' => $userId, ':pid' => $productId]);
+            if($stmtInsert->execute([':uid' => $userId, ':pid' => $productId, ':qty' => $qty])) {
+                return json_encode(['status' => 'success', 'message' => 'Produk masuk keranjang']);
+            }
         }
-        return json_encode(['status' => 'success', 'message' => 'Produk masuk keranjang']);
+        return json_encode(['status' => 'error', 'message' => 'Gagal menyimpan data']);
     }
 
-    
     public function getCart($userId) {
-        $query = "SELECT c.id as cart_id, c.quantity, p.id as product_id, p.nama_produk, p.harga, p.gambar, s.nama_toko 
+    
+        $query = "SELECT c.id as cart_id, c.quantity, p.id as product_id, p.nama_produk, p.harga, p.gambar, p.stok, s.nama_toko 
                   FROM " . $this->table . " c
                   JOIN products p ON c.product_id = p.id
                   JOIN shops s ON p.shop_id = s.id
@@ -45,10 +73,26 @@ class CartController {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    
     public function updateQty($cartId, $qty) {
         if ($qty < 1) return json_encode(['status' => 'error', 'message' => 'Minimal 1']);
         
+       
+        $qProd = "SELECT product_id FROM " . $this->table . " WHERE id = :id";
+        $stmtProd = $this->conn->prepare($qProd);
+        $stmtProd->execute([':id' => $cartId]);
+        $prodId = $stmtProd->fetchColumn();
+
+        if($prodId) {
+             $stockQuery = "SELECT stok FROM products WHERE id = :pid";
+             $stockStmt = $this->conn->prepare($stockQuery);
+             $stockStmt->execute([':pid' => $prodId]);
+             $stok = $stockStmt->fetchColumn();
+
+             if ($qty > $stok) {
+                 return json_encode(['status' => 'error', 'message' => 'Stok tidak mencukupi (Max: '.$stok.')']);
+             }
+        }
+
         $query = "UPDATE " . $this->table . " SET quantity = :qty WHERE id = :id";
         $stmt = $this->conn->prepare($query);
         if($stmt->execute([':qty' => $qty, ':id' => $cartId])){
@@ -57,7 +101,6 @@ class CartController {
         return json_encode(['status' => 'error']);
     }
 
-   
     public function deleteItem($cartId) {
         $query = "DELETE FROM " . $this->table . " WHERE id = :id";
         $stmt = $this->conn->prepare($query);

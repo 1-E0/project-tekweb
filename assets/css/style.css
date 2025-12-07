@@ -1,34 +1,90 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px); 
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);   
-    }
+/* --- Reset & Base Styles --- */
+body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background-color: #f8fafc;
+    /* Pola titik-titik halus */
+    background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+    background-size: 24px 24px;
+    color: #1e293b;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
 }
 
-
-.animate-enter {
-    animation: fadeInUp 0.6s ease-out forwards; 
-}
-
-
+/* --- Custom Scrollbar --- */
 ::-webkit-scrollbar {
     width: 8px;
+    height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-    background: #f1f1f1; 
+    background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #cbd5e1; 
-    border-radius: 4px;
+    background: #cbd5e1;
+    border-radius: 10px;
+    border: 2px solid #f8fafc;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8; 
+    background: #94a3b8;
+}
+
+/* --- Animations --- */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-enter {
+    animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* --- Glassmorphism Effect --- */
+.glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+/* --- Utilities --- */
+.text-gradient {
+    background: linear-gradient(135deg, #2563EB 0%, #4F46E5 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.btn-primary {
+    background: linear-gradient(to right, #2563EB, #4F46E5);
+    color: white;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3);
+}
+
+.input-modern {
+    background-color: rgba(255, 255, 255, 0.6);
+    border: 1px solid #e2e8f0;
+    transition: all 0.3s ease;
+}
+
+.input-modern:focus {
+    background-color: white;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+    outline: none;
 }

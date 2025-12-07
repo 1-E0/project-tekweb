@@ -3,10 +3,7 @@ session_start();
 require_once '../config/Database.php';
 require_once '../Controllers/CartController.php';
 
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit;
-}
+if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit; }
 
 $nama = $_SESSION['nama'];
 $role = $_SESSION['role'];
@@ -14,11 +11,9 @@ $user_id = $_SESSION['user_id'];
 
 $has_shop = false;
 if ($role == 'member') {
-    $database = new Database();
-    $db = $database->getConnection();
-    $query = "SELECT id FROM shops WHERE user_id = :uid LIMIT 1";
-    $stmt = $db->prepare($query);
-    $stmt->execute([':uid' => $user_id]);
+    $db = (new Database())->getConnection();
+    $stmt = $db->prepare("SELECT id FROM shops WHERE user_id = ? LIMIT 1");
+    $stmt->execute([$user_id]);
     if ($stmt->rowCount() > 0) $has_shop = true;
 }
 
@@ -26,9 +21,7 @@ $cartController = new CartController();
 $cartItems = $cartController->getCart($user_id);
 
 $subtotal = 0;
-foreach($cartItems as $item) {
-    $subtotal += ($item['harga'] * $item['quantity']);
-}
+foreach($cartItems as $item) { $subtotal += ($item['harga'] * $item['quantity']); }
 ?>
 
 <!DOCTYPE html>
@@ -36,20 +29,20 @@ foreach($cartItems as $item) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Keranjang Belanja - MarketPlace</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>Keranjang Belanja</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>body { font-family: 'Inter', sans-serif; background-color: #ffffff; }</style>
+    <link rel="stylesheet" href="../assets/css/style.css">
 </head>
-<body class="text-slate-800">
+<body class="text-slate-800 bg-slate-50">
 
-    <nav class="bg-white sticky top-0 z-50 border-b border-slate-100">
+    <nav class="glass sticky top-0 z-50 transition-all duration-300">
         <div class="container mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-4">
-            <a href="../index.php" class="flex items-center gap-2 flex-shrink-0">
-                <div class="bg-blue-600 text-white p-2 rounded-xl shadow-lg shadow-blue-200">
+            <a href="../index.php" class="flex items-center gap-2 flex-shrink-0 group">
+                <div class="bg-gradient-to-br from-blue-600 to-indigo-600 text-white p-2.5 rounded-xl shadow-lg shadow-blue-200 group-hover:scale-105 transition duration-300">
                     <i class="fas fa-shopping-bag text-lg"></i>
                 </div>
                 <span class="text-xl font-extrabold text-slate-800 tracking-tight hidden md:block">MarketPlace</span>
@@ -57,8 +50,8 @@ foreach($cartItems as $item) {
 
             <div class="flex-1 max-w-2xl mx-4">
                 <form action="browse.php" method="GET" class="relative group">
-                    <input type="text" name="search" class="w-full border border-slate-200 bg-slate-50 rounded-full py-3 pl-12 pr-6 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all shadow-sm" placeholder="Cari barang apa hari ini?">
-                    <i class="fas fa-search absolute left-4 top-3.5 text-slate-400 group-focus-within:text-blue-500 transition text-lg"></i>
+                    <input type="text" name="search" class="w-full input-modern rounded-full py-2.5 pl-12 pr-6 text-sm" placeholder="Cari barang apa hari ini?">
+                    <i class="fas fa-search absolute left-4 top-3 text-slate-400 group-focus-within:text-blue-500 transition"></i>
                 </form>
             </div>
 
@@ -70,35 +63,31 @@ foreach($cartItems as $item) {
                     <?php endif; ?>
                 </a>
 
-                <div class="h-8 w-px bg-slate-200 hidden md:block"></div>
-
                 <div class="relative">
-                    <button id="navProfileTrigger" class="flex items-center gap-2 hover:bg-slate-50 p-1 pr-3 rounded-full transition border border-transparent hover:border-slate-200">
+                    <button id="navProfileTrigger" class="flex items-center gap-2 hover:bg-white/50 p-1 pr-3 rounded-full transition border border-transparent hover:border-slate-200">
                         <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm border-2 border-white shadow-sm">
                             <?php echo strtoupper(substr($nama, 0, 1)); ?>
                         </div>
                         <span class="text-sm font-semibold text-slate-700 hidden md:block max-w-[100px] truncate"><?php echo htmlspecialchars($nama); ?></span>
-                        <i class="fas fa-chevron-down text-xs text-slate-400 ml-1 transition-transform duration-200" id="navChevron"></i>
+                        <i class="fas fa-chevron-down text-xs text-slate-400 ml-1 transition" id="navChevron"></i>
                     </button>
-
-                    <div id="navProfileDropdown" class="hidden absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 origin-top-right ring-1 ring-black/5">
-                        <div class="p-5 bg-slate-50 border-b border-slate-100 flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-lg shadow-md"><i class="fas fa-user"></i></div>
+                    <div id="navProfileDropdown" class="hidden absolute right-0 mt-3 w-64 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-enter">
+                        <div class="p-5 border-b border-slate-100 flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-lg"><i class="fas fa-user"></i></div>
                             <div>
                                 <p class="font-bold text-slate-800 text-sm"><?php echo htmlspecialchars($nama); ?></p>
-                                <p class="text-xs text-slate-500 capitalize"><?php echo ($role === 'admin') ? 'Admin' : 'User'; ?></p>
+                                <p class="text-xs text-slate-500 capitalize"><?php echo $role; ?></p>
                             </div>
                         </div>
                         <div class="p-2 space-y-1">
                             <?php if($has_shop): ?>
-                                <a href="manage_products.php" class="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition font-medium"><i class="fas fa-store w-5"></i> Toko Saya</a>
+                                <a href="manage_products.php" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition"><i class="fas fa-store w-5"></i> Toko Saya</a>
                             <?php elseif($role != 'admin'): ?>
-                                <a href="create_shop.php" class="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition font-medium"><i class="fas fa-store w-5"></i> Buka Toko Gratis</a>
+                                <a href="create_shop.php" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition"><i class="fas fa-store w-5"></i> Buka Toko</a>
                             <?php endif; ?>
-                            
-                            <a href="settings.php?from=cart" class="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition font-medium"><i class="fas fa-cog w-5"></i> Pengaturan</a>
+                            <a href="settings.php" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition"><i class="fas fa-cog w-5"></i> Pengaturan</a>
                             <div class="h-px bg-slate-100 my-1 mx-2"></div>
-                            <a href="../logout.php" class="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-xl transition font-medium"><i class="fas fa-sign-out-alt w-5"></i> Keluar</a>
+                            <a href="../logout.php" class="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl transition"><i class="fas fa-sign-out-alt w-5"></i> Keluar</a>
                         </div>
                     </div>
                 </div>
@@ -107,12 +96,12 @@ foreach($cartItems as $item) {
     </nav>
 
     <div class="container mx-auto px-4 sm:px-6 py-10 min-h-screen">
-        <h1 class="text-2xl font-bold text-slate-900 mb-8">Keranjang Belanja</h1>
+        <h1 class="text-2xl font-bold text-slate-900 mb-8 animate-enter">Keranjang Belanja</h1>
 
         <?php if(count($cartItems) > 0): ?>
         <div class="flex flex-col lg:flex-row gap-8">
-            <div class="flex-1 space-y-4">
-                <div class="bg-white rounded-2xl border border-slate-200 p-4 flex items-center justify-between shadow-sm">
+            <div class="flex-1 space-y-4 animate-enter" style="animation-delay: 0.1s">
+                <div class="glass rounded-2xl p-4 flex items-center justify-between shadow-sm">
                     <div class="flex items-center gap-3">
                         <input type="checkbox" checked class="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
                         <span class="text-sm font-semibold text-slate-700">Pilih Semua (<?php echo count($cartItems); ?>)</span>
@@ -121,7 +110,7 @@ foreach($cartItems as $item) {
                 </div>
 
                 <?php foreach($cartItems as $item): ?>
-                <div class="bg-white rounded-2xl border border-slate-200 p-5 flex gap-4 items-start shadow-sm transition hover:shadow-md hover:border-blue-200">
+                <div class="bg-white rounded-2xl border border-slate-100 p-5 flex gap-4 items-start shadow-sm hover:shadow-md transition duration-300">
                     <div class="pt-8">
                         <input type="checkbox" checked class="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
                     </div>
@@ -139,7 +128,7 @@ foreach($cartItems as $item) {
                                 </button>
                             </div>
                             <div class="flex items-center gap-2 mt-1">
-                                <div class="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-xs text-slate-500">
+                                <div class="w-5 h-5 rounded-full bg-blue-50 flex items-center justify-center text-xs text-blue-600">
                                     <i class="fas fa-store"></i>
                                 </div>
                                 <span class="text-xs font-medium text-slate-500"><?php echo htmlspecialchars($item['nama_toko']); ?></span>
@@ -164,65 +153,49 @@ foreach($cartItems as $item) {
                 <?php endforeach; ?>
             </div>
 
-            <div class="w-full lg:w-96 flex-shrink-0">
-                <div class="bg-white rounded-2xl border border-slate-200 p-6 sticky top-28 shadow-sm">
+            <div class="w-full lg:w-96 flex-shrink-0 animate-enter" style="animation-delay: 0.2s">
+                <div class="glass rounded-2xl p-6 sticky top-28">
                     <h3 class="font-bold text-slate-800 text-lg mb-6">Ringkasan Belanja</h3>
                     <div class="space-y-4 mb-6 border-b border-slate-100 pb-6">
                         <div class="flex justify-between text-sm text-slate-600">
                             <span>Total Harga</span>
                             <span class="font-bold text-slate-800">Rp <?php echo number_format($subtotal, 0, ',', '.'); ?></span>
                         </div>
-                        <div class="flex justify-between text-sm text-slate-600">
-                            <span>Biaya Layanan</span>
-                            <span class="font-medium">Rp 1.000</span>
-                        </div>
                     </div>
 
                     <div class="flex justify-between items-center mb-8">
                         <span class="font-bold text-slate-800 text-lg">Total Tagihan</span>
-                        <span class="font-extrabold text-blue-600 text-xl">Rp <?php echo number_format($subtotal + 1000, 0, ',', '.'); ?></span>
+                        <span class="font-extrabold text-blue-600 text-xl">Rp <?php echo number_format($subtotal, 0, ',', '.'); ?></span>
                     </div>
 
-                    <a href="checkout.php" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-200 transition transform active:scale-95 flex justify-center items-center gap-2">
+                    <a href="checkout.php" class="w-full btn-primary text-white font-bold py-3.5 rounded-xl shadow-lg flex justify-center items-center gap-2">
                         Beli (<?php echo count($cartItems); ?>) <i class="fas fa-arrow-right"></i>
                     </a>
                 </div>
             </div>
         </div>
         <?php else: ?>
-            <div class="flex flex-col items-center justify-center py-20 text-center bg-white rounded-[2.5rem] border border-dashed border-slate-200">
-                <div class="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mb-6">
+            <div class="glass flex flex-col items-center justify-center py-20 text-center rounded-[2.5rem] border-dashed border-2 border-slate-300">
+                <div class="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mb-6 animate-bounce">
                     <i class="fas fa-shopping-basket text-4xl text-blue-300"></i>
                 </div>
                 <h2 class="text-2xl font-bold text-slate-800 mb-2">Keranjangmu Kosong</h2>
-                <a href="../index.php" class="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition">Mulai Belanja</a>
+                <a href="../index.php" class="btn-primary px-8 py-3 rounded-xl font-bold mt-4 inline-block">Mulai Belanja</a>
             </div>
         <?php endif; ?>
     </div>
-
+    
     <script>
         $(document).ready(function(){
             $('#navProfileTrigger').click(function(e){ e.stopPropagation(); $('#navProfileDropdown').slideToggle(150); $('#navChevron').toggleClass('rotate-180'); });
             $(document).click(function(){ $('#navProfileDropdown').slideUp(150); $('#navChevron').removeClass('rotate-180'); });
         });
-
         function updateQty(cartId, newQty) {
             if(newQty < 1) return;
-            $.post('../api/cart.php', { action: 'update_qty', cart_id: cartId, quantity: newQty }, function(res){
-                if(res.status === 'success') location.reload();
-            }, 'json');
+            $.post('../api/cart.php', { action: 'update_qty', cart_id: cartId, quantity: newQty }, function(res){ if(res.status === 'success') location.reload(); }, 'json');
         }
-
         function deleteItem(cartId) {
-            Swal.fire({
-                title: 'Hapus barang?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, Hapus', cancelButtonText: 'Batal'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    $.post('../api/cart.php', { action: 'delete', cart_id: cartId }, function(res){
-                        if(res.status === 'success') location.reload();
-                    }, 'json');
-                }
-            });
+            Swal.fire({ title: 'Hapus barang?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, Hapus', cancelButtonText: 'Batal' }).then((result) => { if (result.isConfirmed) { $.post('../api/cart.php', { action: 'delete', cart_id: cartId }, function(res){ if(res.status === 'success') location.reload(); }, 'json'); } });
         }
     </script>
 </body>

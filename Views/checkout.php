@@ -18,7 +18,7 @@ $balance = $stmt->fetchColumn();
 
 $total = 0;
 foreach($items as $i) $total += $i['harga'] * $i['quantity'];
-$grand_total = $total + 1000;
+$grand_total = $total;
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -42,10 +42,7 @@ $grand_total = $total + 1000;
                 <span class="font-medium">Rp <?php echo number_format($item['harga'] * $item['quantity']); ?></span>
             </div>
             <?php endforeach; ?>
-            <div class="flex justify-between py-2 text-sm text-slate-500 mt-2 border-t border-dashed">
-                <span>Biaya Layanan</span>
-                <span>Rp 1.000</span>
-            </div>
+            
             <div class="flex justify-between py-4 text-lg font-bold border-t border-slate-200 mt-2">
                 <span>Total Bayar</span>
                 <span class="text-blue-600">Rp <?php echo number_format($grand_total); ?></span>

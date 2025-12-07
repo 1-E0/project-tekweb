@@ -25,8 +25,6 @@ if ($_POST['action'] == 'checkout') {
     foreach($cartItems as $item) {
         $total += $item['harga'] * $item['quantity'];
     }
-   
-    $total += 1000;
 
     $orderObj = new OrderController();
     echo $orderObj->checkout($userId, $total, $cartItems);
