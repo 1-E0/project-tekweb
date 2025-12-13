@@ -75,12 +75,16 @@ class ProductController {
         $targetDir = "../assets/images/"; 
         if (!file_exists($targetDir)) mkdir($targetDir, 0777, true);
         
-        $fileName = time() . '_' . basename($file["name"]);
-        $targetFilePath = $targetDir . $fileName;
-        $fileType = pathinfo($targetFilePath, PATHINFO_EXTENSION);
-        $allowTypes = array('jpg','png','jpeg','gif'); 
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $file["tmp_name"]);
+        finfo_close($finfo);
+
+        $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
         
-        if(in_array(strtolower($fileType), $allowTypes)){
+        if(in_array($mimeType, $allowedMimeTypes)){
+            $fileName = time() . '_' . basename($file["name"]);
+            $targetFilePath = $targetDir . $fileName;
+
             if(move_uploaded_file($file["tmp_name"], $targetFilePath)){
                 $query = "INSERT INTO " . $this->table . " (shop_id, category_id, nama_produk, deskripsi, harga, stok, gambar) VALUES (:shop_id, :cat_id, :nama, :desc, :harga, :stok, :img)";
                 $stmt = $this->conn->prepare($query);
@@ -95,7 +99,7 @@ class ProductController {
                 if($stmt->execute()) return json_encode(['status' => 'success', 'message' => 'Produk berhasil ditambahkan!']);
             }
         }
-        return json_encode(['status' => 'error', 'message' => 'Gagal upload gambar atau simpan data.']);
+        return json_encode(['status' => 'error', 'message' => 'Format file harus JPG, PNG, atau GIF.']);
     }
 
     public function updateProduct($id, $shopId, $nama, $kategori, $harga, $stok, $deskripsi, $file) {
@@ -106,13 +110,17 @@ class ProductController {
         $fileName = "";
         
         if (!empty($file['name'])) {
-            $targetDir = "../assets/images/";
-            $fileName = time() . '_' . basename($file["name"]);
-            $targetFilePath = $targetDir . $fileName;
-            $fileType = pathinfo($targetFilePath, PATHINFO_EXTENSION);
-            $allowTypes = array('jpg','png','jpeg','gif');
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mimeType = finfo_file($finfo, $file["tmp_name"]);
+            finfo_close($finfo);
 
-            if(in_array(strtolower($fileType), $allowTypes)){
+            $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
+
+            if(in_array($mimeType, $allowedMimeTypes)){
+                $targetDir = "../assets/images/";
+                $fileName = time() . '_' . basename($file["name"]);
+                $targetFilePath = $targetDir . $fileName;
+
                 if(move_uploaded_file($file["tmp_name"], $targetFilePath)){
                     $imageQueryPart = ", gambar = :img";
                 } else {

@@ -11,7 +11,6 @@ class AuthController {
     }
 
     public function register($nama, $username, $email, $password) {
-       
         $checkQuery = "SELECT id FROM " . $this->table . " WHERE username = :username OR email = :email";
         $stmt = $this->conn->prepare($checkQuery);
         $stmt->bindParam(':username', $username);
@@ -22,11 +21,8 @@ class AuthController {
             return json_encode(['status' => 'error', 'message' => 'Username atau Email sudah terdaftar!']);
         }
 
-       
         $query = "INSERT INTO " . $this->table . " (nama_lengkap, username, email, password, role) VALUES (:nama, :username, :email, :password, 'member')";
         $stmt = $this->conn->prepare($query);
-
-        
         $password_hash = password_hash($password, PASSWORD_BCRYPT);
 
         $stmt->bindParam(':nama', $nama);
@@ -41,7 +37,7 @@ class AuthController {
     }
 
     public function login($username, $password) {
-        $query = "SELECT id, username, password, nama_lengkap, role, balance FROM " . $this->table . " WHERE username = :username LIMIT 0,1";
+        $query = "SELECT id, username, password, nama_lengkap, role FROM " . $this->table . " WHERE username = :username LIMIT 0,1";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':username', $username);
         $stmt->execute();
@@ -49,11 +45,14 @@ class AuthController {
         if ($stmt->rowCount() > 0) {
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if (password_verify($password, $row['password'])) {
-                session_start();
+                if (session_status() === PHP_SESSION_NONE) session_start();
                 $_SESSION['user_id'] = $row['id'];
                 $_SESSION['nama'] = $row['nama_lengkap'];
                 $_SESSION['role'] = $row['role']; 
                 
+                if (empty($_SESSION['csrf_token'])) {
+                    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+                }
                 
                 return json_encode([
                     'status' => 'success', 

@@ -23,6 +23,12 @@ $total_rating = $stats['rating'] > 0 ? number_format($stats['rating'], 1) : '0';
 
 $nama = $_SESSION['nama'];
 $role = $_SESSION['role']; 
+$has_shop = true;
+$user_id = $_SESSION['user_id'];
+
+$stmt_bal = $db->prepare("SELECT balance FROM users WHERE id = ?");
+$stmt_bal->execute([$user_id]);
+$nav_balance = $stmt_bal->fetchColumn() ?: 0;
 ?>
 
 <!DOCTYPE html>
@@ -39,33 +45,44 @@ $role = $_SESSION['role'];
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body class="text-slate-800 bg-slate-50">
+    <div id="page-transition"></div>
 
-    <nav class="glass sticky top-0 z-50 border-b border-slate-200/50">
-        <div class="container mx-auto px-6 h-20 flex justify-between items-center">
-            
-            <div class="flex items-center gap-2">
-                <div class="bg-blue-600 text-white p-2 rounded-lg shadow-md">
-                    <i class="fas fa-store"></i>
+    <nav class="glass sticky top-0 z-50 transition-all duration-300">
+        <div class="container mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-4">
+            <a href="../index.php" class="flex items-center gap-2 flex-shrink-0 group">
+                <div class="bg-gradient-to-br from-blue-600 to-indigo-600 text-white p-2.5 rounded-xl shadow-lg shadow-blue-200 group-hover:scale-105 transition duration-300">
+                    <i class="fas fa-shopping-bag text-lg"></i>
                 </div>
-                <span class="font-bold text-lg tracking-tight"><?php echo htmlspecialchars($shop['nama_toko']); ?></span>
+                <span class="text-xl font-extrabold text-slate-800 tracking-tight hidden md:block">MarketPlace</span>
+            </a>
+
+            <div class="flex-1 max-w-2xl mx-4">
+                <form action="browse.php" method="GET" class="relative group">
+                    <input type="text" name="search" class="w-full input-modern rounded-full py-2.5 pl-12 pr-6 text-sm" placeholder="Cari produk impianmu...">
+                    <i class="fas fa-search absolute left-4 top-3 text-slate-400 group-focus-within:text-blue-500 transition"></i>
+                </form>
             </div>
 
-            <div class="flex items-center gap-4">
-                <a href="../index.php" class="text-slate-500 hover:text-blue-600 text-sm font-medium transition">
-                    <i class="fas fa-home mr-1"></i> Ke Halaman Utama
+            <div class="flex items-center gap-4 flex-shrink-0">
+                <button onclick="openTopUp()" class="hidden md:flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-full transition font-bold text-xs border border-blue-100 group">
+                    <i class="fas fa-wallet text-lg group-hover:scale-110 transition"></i>
+                    <span>Rp <?php echo number_format($nav_balance, 0, ',', '.'); ?></span>
+                    <div class="w-4 h-4 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] ml-1"><i class="fas fa-plus"></i></div>
+                </button>
+
+                <a href="cart.php" class="text-slate-500 hover:text-blue-600 p-2 relative transition">
+                    <i class="fas fa-shopping-cart text-xl"></i>
                 </a>
-                <div class="h-6 w-px bg-slate-200"></div>
-                
                 <div class="relative">
-                    <button id="navProfileTrigger" class="flex items-center gap-2 hover:bg-white/50 p-1 pr-2 rounded-full transition group cursor-pointer border border-transparent hover:border-slate-200">
-                        <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm border border-blue-200">
+                    <button id="navProfileTrigger" class="flex items-center gap-2 hover:bg-white/50 p-1 pr-3 rounded-full transition border border-transparent hover:border-slate-200">
+                        <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm border-2 border-white shadow-sm">
                             <?php echo strtoupper(substr($nama, 0, 1)); ?>
                         </div>
-                        <span class="text-sm font-semibold hidden md:block"><?php echo htmlspecialchars($nama); ?></span>
+                        <span class="text-sm font-semibold text-slate-700 hidden md:block max-w-[100px] truncate"><?php echo htmlspecialchars($nama); ?></span>
                         <i class="fas fa-chevron-down text-xs text-slate-400 ml-1 transition" id="navChevron"></i>
                     </button>
-                    <div id="navProfileDropdown" class="hidden absolute right-0 mt-3 w-64 bg-white/90 backdrop-blur-md rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-enter">
-                        <div class="p-4 border-b border-slate-100 flex items-center gap-3">
+                    <div id="navProfileDropdown" class="hidden absolute right-0 mt-3 w-64 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-enter">
+                        <div class="p-5 border-b border-slate-100 flex items-center gap-3">
                             <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-lg"><i class="fas fa-user"></i></div>
                             <div>
                                 <p class="font-bold text-slate-800 text-sm"><?php echo htmlspecialchars($nama); ?></p>
@@ -73,7 +90,14 @@ $role = $_SESSION['role'];
                             </div>
                         </div>
                         <div class="p-2 space-y-1">
-                            <a href="settings.php?from=shop" class="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition"><i class="fas fa-cog w-5"></i> Pengaturan</a>
+                            <button onclick="openTopUp()" class="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition md:hidden">
+                                <i class="fas fa-wallet w-5"></i> 
+                                <span class="font-bold text-blue-600">Rp <?php echo number_format($nav_balance, 0, ',', '.'); ?></span>
+                                <span class="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded ml-auto">+ Top Up</span>
+                            </button>
+                            <a href="shop_orders.php" class="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition"><i class="fas fa-box-open w-5"></i> Pesanan Masuk</a>
+                            <a href="my_orders.php" class="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition"><i class="fas fa-history w-5"></i> Riwayat Belanja</a>
+                            <a href="settings.php" class="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition"><i class="fas fa-cog w-5"></i> Pengaturan</a>
                             <div class="h-px bg-slate-100 my-1 mx-2"></div>
                             <a href="../logout.php" class="flex items-center gap-3 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition"><i class="fas fa-sign-out-alt w-5"></i> Keluar</a>
                         </div>
@@ -84,6 +108,14 @@ $role = $_SESSION['role'];
     </nav>
 
     <div class="container mx-auto px-4 sm:px-6 py-8 space-y-8">
+        <div>
+            <button onclick="history.back()" class="group inline-flex items-center gap-2 text-slate-500 hover:text-blue-600 transition-colors duration-200 font-medium text-sm">
+                <div class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center shadow-sm group-hover:border-blue-200 group-hover:bg-blue-50 transition-all">
+                    <i class="fas fa-arrow-left text-xs"></i>
+                </div>
+                Kembali
+            </button>
+        </div>
 
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6 animate-enter">
             <div class="glass p-6 rounded-2xl flex items-center gap-4 transition hover:-translate-y-1">
@@ -121,7 +153,10 @@ $role = $_SESSION['role'];
                         <div class="flex items-center gap-2"><i class="fas fa-calendar text-blue-500"></i> Sejak 2025</div>
                     </div>
                 </div>
-                <button onclick="openEditShopModal()" class="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-blue-600 px-5 py-2.5 rounded-xl text-sm font-bold transition shadow-sm flex items-center gap-2"><i class="fas fa-edit"></i> Edit Toko</button>
+                <div class="flex gap-2">
+                    <a href="shop_orders.php" class="bg-blue-600 text-white hover:bg-blue-700 px-5 py-2.5 rounded-xl text-sm font-bold transition shadow-lg shadow-blue-200 flex items-center gap-2"><i class="fas fa-box-open"></i> Pesanan Masuk</a>
+                    <button onclick="toggleModal('modalEditShop', true)" class="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-blue-600 px-5 py-2.5 rounded-xl text-sm font-bold transition shadow-sm flex items-center gap-2"><i class="fas fa-edit"></i> Edit Toko</button>
+                </div>
             </div>
         </div>
 
@@ -130,7 +165,7 @@ $role = $_SESSION['role'];
                 <h3 class="text-lg font-bold text-slate-800">Daftar Produk</h3>
                 <div class="flex gap-3">
                     <input type="text" id="searchInput" placeholder="Cari produk..." class="input-modern rounded-xl px-4 py-2 text-sm w-64">
-                    <button onclick="$('#modalAdd').removeClass('hidden')" class="btn-primary px-4 py-2 rounded-xl text-sm font-bold shadow-md flex items-center gap-2"><i class="fas fa-plus"></i> Tambah</button>
+                    <button onclick="toggleModal('modalAdd', true)" class="btn-primary px-4 py-2 rounded-xl text-sm font-bold shadow-md flex items-center gap-2"><i class="fas fa-plus"></i> Tambah</button>
                 </div>
             </div>
 
@@ -179,11 +214,11 @@ $role = $_SESSION['role'];
         </div>
     </div>
 
-    <div id="modalAdd" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div class="glass bg-white rounded-3xl w-full max-w-lg shadow-2xl p-8 animate-enter">
+    <div id="modalAdd" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-300 opacity-0 scale-95 pointer-events-none">
+        <div class="glass bg-white rounded-3xl w-full max-w-lg shadow-2xl p-8 transform transition-all duration-300">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-xl font-bold text-slate-800">Tambah Produk Baru</h2>
-                <button onclick="$('#modalAdd').addClass('hidden')" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200"><i class="fas fa-times text-slate-500"></i></button>
+                <button onclick="toggleModal('modalAdd', false)" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200"><i class="fas fa-times text-slate-500"></i></button>
             </div>
             <form id="formAddProduct" enctype="multipart/form-data" class="space-y-4">
                 <input type="hidden" name="action" value="add">
@@ -206,11 +241,11 @@ $role = $_SESSION['role'];
         </div>
     </div>
 
-    <div id="modalEdit" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div class="glass bg-white rounded-3xl w-full max-w-lg shadow-2xl p-8 animate-enter">
+    <div id="modalEdit" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-300 opacity-0 scale-95 pointer-events-none">
+        <div class="glass bg-white rounded-3xl w-full max-w-lg shadow-2xl p-8 transform transition-all duration-300">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-xl font-bold text-slate-800">Edit Produk</h2>
-                <button onclick="$('#modalEdit').addClass('hidden')" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200"><i class="fas fa-times text-slate-500"></i></button>
+                <button onclick="toggleModal('modalEdit', false)" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200"><i class="fas fa-times text-slate-500"></i></button>
             </div>
             <form id="formEditProduct" enctype="multipart/form-data" class="space-y-4">
                 <input type="hidden" name="action" value="update">
@@ -239,11 +274,11 @@ $role = $_SESSION['role'];
         </div>
     </div>
 
-    <div id="modalEditShop" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div class="glass bg-white rounded-3xl w-full max-w-lg shadow-2xl p-8 animate-enter">
+    <div id="modalEditShop" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-300 opacity-0 scale-95 pointer-events-none">
+        <div class="glass bg-white rounded-3xl w-full max-w-lg shadow-2xl p-8 transform transition-all duration-300">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-xl font-bold text-slate-800">Edit Profil Toko</h2>
-                <button onclick="$('#modalEditShop').addClass('hidden')" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200"><i class="fas fa-times text-slate-500"></i></button>
+                <button onclick="toggleModal('modalEditShop', false)" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200"><i class="fas fa-times text-slate-500"></i></button>
             </div>
             <form id="formEditShop" class="space-y-4">
                 <input type="hidden" name="action" value="update_shop">
@@ -255,7 +290,55 @@ $role = $_SESSION['role'];
         </div>
     </div>
 
+    <footer class="bg-white border-t border-slate-200 py-10 mt-12">
+        <div class="container mx-auto px-6 text-center">
+            <p class="font-bold text-slate-800 text-lg mb-2">MarketPlace</p>
+            <p class="text-slate-500 text-sm">&copy; 2025 Daniel & Aldwin.</p>
+        </div>
+    </footer>
+
     <script>
+        function toggleModal(modalId, show) {
+            const modal = document.getElementById(modalId);
+            if (show) {
+                modal.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
+                modal.classList.add('opacity-100', 'scale-100', 'pointer-events-auto');
+            } else {
+                modal.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
+                modal.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const transitionEl = document.getElementById('page-transition');
+            window.addEventListener('pageshow', function(event) {
+                if (transitionEl) transitionEl.classList.add('page-loaded');
+            });
+            setTimeout(() => {
+                if (transitionEl) transitionEl.classList.add('page-loaded');
+            }, 100);
+            const links = document.querySelectorAll('a');
+            links.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    const href = this.getAttribute('href');
+                    const target = this.getAttribute('target');
+                    if (!href || href.startsWith('#') || href.startsWith('javascript') || target === '_blank') {
+                        return;
+                    }
+                    const currentUrl = new URL(window.location.href);
+                    const targetUrl = new URL(href, window.location.origin);
+                    if (currentUrl.pathname === targetUrl.pathname && currentUrl.origin === targetUrl.origin) {
+                        return;
+                    }
+                    e.preventDefault();
+                    transitionEl.classList.remove('page-loaded');
+                    setTimeout(() => {
+                        window.location.href = href;
+                    }, 500);
+                });
+            });
+        });
+
         $(document).ready(function(){
             $('#navProfileTrigger').click(function(e){ e.stopPropagation(); $('#navProfileDropdown').slideToggle(150); $('#navChevron').toggleClass('rotate-180'); });
             $(document).click(function(){ $('#navProfileDropdown').slideUp(150); $('#navChevron').removeClass('rotate-180'); });
@@ -286,7 +369,13 @@ $role = $_SESSION['role'];
             
              $('#formEditShop').on('submit', function(e){
                 e.preventDefault();
-                Swal.fire('Info', 'Fitur update toko perlu disesuaikan dengan backend API Anda.', 'info');
+                var formData = new FormData(this);
+                $.ajax({
+                    url: '../api/shop.php', type: 'POST', data: formData, contentType: false, processData: false,
+                    success: function (data) {
+                        if(data.status === 'success'){ Swal.fire({ icon: 'success', title: 'Updated!', showConfirmButton: false, timer: 1000 }).then(() => location.reload()); } else { Swal.fire('Gagal', data.message, 'error'); }
+                    }
+                });
              });
         });
 
@@ -306,16 +395,35 @@ $role = $_SESSION['role'];
                     $('#edit_stok').val(p.stok);
                     $('#edit_harga').val(p.harga);
                     $('#edit_deskripsi').val(p.deskripsi);
-                    
-                    $('#modalEdit').removeClass('hidden');
+                    toggleModal('modalEdit', true);
                 } else {
                     Swal.fire('Error', 'Gagal mengambil data produk', 'error');
                 }
             }, 'json');
         }
 
-        function openEditShopModal() {
-            $('#modalEditShop').removeClass('hidden');
+        function openTopUp() {
+            Swal.fire({
+                title: 'Isi Saldo',
+                input: 'number',
+                inputLabel: 'Masukkan Nominal (Rp)',
+                inputPlaceholder: 'Contoh: 50000',
+                showCancelButton: true,
+                confirmButtonText: 'Top Up',
+                confirmButtonColor: '#2563EB',
+                preConfirm: (amount) => {
+                    if (!amount) Swal.showValidationMessage('Nominal harus diisi');
+                    return amount;
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('../api/user.php', { action: 'topup', amount: result.value }, function(res) {
+                        if(res.status === 'success') {
+                            Swal.fire('Berhasil', 'Saldo bertambah!', 'success').then(() => location.reload());
+                        }
+                    }, 'json');
+                }
+            });
         }
     </script>
 </body>

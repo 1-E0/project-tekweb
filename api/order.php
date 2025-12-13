@@ -9,10 +9,10 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-if ($_POST['action'] == 'checkout') {
+$orderObj = new OrderController();
+
+if (isset($_POST['action']) && $_POST['action'] == 'checkout') {
     $userId = $_SESSION['user_id'];
-    
-    
     $cartObj = new CartController();
     $cartItems = $cartObj->getCart($userId);
     
@@ -26,7 +26,9 @@ if ($_POST['action'] == 'checkout') {
         $total += $item['harga'] * $item['quantity'];
     }
 
-    $orderObj = new OrderController();
     echo $orderObj->checkout($userId, $total, $cartItems);
+}
+elseif (isset($_POST['action']) && $_POST['action'] == 'update_status') {
+    echo $orderObj->updateStatus($_POST['order_id'], $_POST['status']);
 }
 ?>

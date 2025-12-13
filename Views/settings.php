@@ -7,24 +7,24 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+$user_id = $_SESSION['user_id'];
 $nama = $_SESSION['nama'];
 $role = $_SESSION['role'];
-$user_id = $_SESSION['user_id'];
+$has_shop = false;
+$nav_balance = 0;
 
-$from = $_GET['from'] ?? 'home';
-$back_url = '../index.php';
-$back_label = 'Ke Halaman Utama';
+$database = new Database();
+$db = $database->getConnection();
 
-if ($from == 'shop') {
-    $back_url = 'manage_products.php';
-    $back_label = 'Ke Toko Saya';
-} elseif ($from == 'browse') {
-    $back_url = 'browse.php';
-    $back_label = 'Ke Jelajah Produk';
-} elseif ($from == 'cart') {
-    $back_url = 'cart.php';
-    $back_label = 'Ke Keranjang';
+if ($role == 'member') {
+    $stmt = $db->prepare("SELECT id FROM shops WHERE user_id = ? LIMIT 1");
+    $stmt->execute([$user_id]);
+    if ($stmt->rowCount() > 0) $has_shop = true;
 }
+
+$stmt_bal = $db->prepare("SELECT balance FROM users WHERE id = ?");
+$stmt_bal->execute([$user_id]);
+$nav_balance = $stmt_bal->fetchColumn() ?: 0;
 ?>
 
 <!DOCTYPE html>
@@ -38,27 +38,87 @@ if ($from == 'shop') {
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="../assets/css/style.css">
     <style>body { font-family: 'Inter', sans-serif; background-color: #F8F9FA; }</style>
 </head>
-<body class="text-slate-800">
+<body class="text-slate-800 bg-slate-50">
+    <div id="page-transition"></div>
 
-    <nav class="bg-white shadow-sm sticky top-0 z-50">
-        <div class="container mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
-            <a href="<?php echo $back_url; ?>" class="flex items-center gap-2 group">
-                <div class="bg-blue-600 text-white p-2 rounded-lg transition group-hover:bg-blue-700">
-                    <i class="fas fa-arrow-left"></i>
+    <nav class="glass sticky top-0 z-50 transition-all duration-300">
+        <div class="container mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-4">
+            <a href="../index.php" class="flex items-center gap-2 flex-shrink-0 group">
+                <div class="bg-gradient-to-br from-blue-600 to-indigo-600 text-white p-2.5 rounded-xl shadow-lg shadow-blue-200 group-hover:scale-105 transition duration-300">
+                    <i class="fas fa-shopping-bag text-lg"></i>
                 </div>
-                <div class="flex flex-col">
-                    <span class="text-xs text-slate-500 font-medium">Kembali</span>
-                    <span class="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition"><?php echo $back_label; ?></span>
-                </div>
+                <span class="text-xl font-extrabold text-slate-800 tracking-tight hidden md:block">MarketPlace</span>
             </a>
-            <div class="font-bold text-lg text-slate-700">Pengaturan Akun</div>
-            <div class="w-10"></div> 
+
+            <div class="flex-1 max-w-2xl mx-4">
+                <form action="browse.php" method="GET" class="relative group">
+                    <input type="text" name="search" class="w-full input-modern rounded-full py-2.5 pl-12 pr-6 text-sm" placeholder="Cari barang apa hari ini?">
+                    <i class="fas fa-search absolute left-4 top-3 text-slate-400 group-focus-within:text-blue-500 transition"></i>
+                </form>
+            </div>
+
+            <div class="flex items-center gap-4 flex-shrink-0">
+                <button onclick="openTopUp()" class="hidden md:flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-full transition font-bold text-xs border border-blue-100 group">
+                    <i class="fas fa-wallet text-lg group-hover:scale-110 transition"></i>
+                    <span>Rp <?php echo number_format($nav_balance, 0, ',', '.'); ?></span>
+                    <div class="w-4 h-4 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] ml-1"><i class="fas fa-plus"></i></div>
+                </button>
+
+                <a href="cart.php" class="text-slate-500 hover:text-blue-600 p-2 relative transition">
+                    <i class="fas fa-shopping-cart text-xl"></i>
+                </a>
+                <div class="relative">
+                    <button id="navProfileTrigger" class="flex items-center gap-2 hover:bg-white/50 p-1 pr-3 rounded-full transition border border-transparent hover:border-slate-200">
+                        <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm border-2 border-white shadow-sm">
+                            <?php echo strtoupper(substr($nama, 0, 1)); ?>
+                        </div>
+                        <span class="text-sm font-semibold text-slate-700 hidden md:block max-w-[100px] truncate"><?php echo htmlspecialchars($nama); ?></span>
+                        <i class="fas fa-chevron-down text-xs text-slate-400 ml-1 transition" id="navChevron"></i>
+                    </button>
+                    <div id="navProfileDropdown" class="hidden absolute right-0 mt-3 w-64 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-enter">
+                        <div class="p-5 border-b border-slate-100 flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-lg"><i class="fas fa-user"></i></div>
+                            <div>
+                                <p class="font-bold text-slate-800 text-sm"><?php echo htmlspecialchars($nama); ?></p>
+                                <p class="text-xs text-slate-500 capitalize"><?php echo $role; ?></p>
+                            </div>
+                        </div>
+                        <div class="p-2 space-y-1">
+                            <button onclick="openTopUp()" class="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition md:hidden">
+                                <i class="fas fa-wallet w-5"></i> 
+                                <span class="font-bold text-blue-600">Rp <?php echo number_format($nav_balance, 0, ',', '.'); ?></span>
+                                <span class="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded ml-auto">+ Top Up</span>
+                            </button>
+                            <?php if($has_shop): ?>
+                                <a href="manage_products.php" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition"><i class="fas fa-store w-5"></i> Toko Saya</a>
+                            <?php elseif($role != 'admin'): ?>
+                                <a href="create_shop.php" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition"><i class="fas fa-store w-5"></i> Buka Toko</a>
+                            <?php endif; ?>
+                            <a href="my_orders.php" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition"><i class="fas fa-history w-5"></i> Riwayat Belanja</a>
+                            <a href="settings.php" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition"><i class="fas fa-cog w-5"></i> Pengaturan</a>
+                            <div class="h-px bg-slate-100 my-1 mx-2"></div>
+                            <a href="../logout.php" class="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl transition"><i class="fas fa-sign-out-alt w-5"></i> Keluar</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </nav>
 
     <div class="container mx-auto px-4 sm:px-6 py-8 max-w-4xl">
+        <div class="mb-6 flex justify-between items-center">
+            <button onclick="history.back()" class="group inline-flex items-center gap-2 text-slate-500 hover:text-blue-600 transition-colors duration-200 font-medium text-sm">
+                <div class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center shadow-sm group-hover:border-blue-200 group-hover:bg-blue-50 transition-all">
+                    <i class="fas fa-arrow-left text-xs"></i>
+                </div>
+                Kembali
+            </button>
+            <h1 class="text-xl font-bold text-slate-800">Pengaturan Akun</h1>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             
             <div class="md:col-span-1">
@@ -78,13 +138,7 @@ if ($from == 'shop') {
                 <div class="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl shadow-lg p-6 text-white relative overflow-hidden">
                     <div class="relative z-10">
                         <p class="text-blue-100 text-sm font-medium mb-1">Saldo Saya</p>
-                        <h2 class="text-3xl font-bold mb-4">Rp <?php 
-                            $db = (new Database())->getConnection();
-                            $stmt = $db->prepare("SELECT balance FROM users WHERE id = ?");
-                            $stmt->execute([$user_id]);
-                            $saldo = $stmt->fetchColumn();
-                            echo number_format($saldo, 0, ',', '.'); 
-                        ?></h2>
+                        <h2 class="text-3xl font-bold mb-4">Rp <?php echo number_format($nav_balance, 0, ',', '.'); ?></h2>
                         <button onclick="openTopUp()" class="bg-white text-blue-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-50 transition shadow-sm">
                             <i class="fas fa-plus-circle mr-1"></i> Isi Saldo
                         </button>
@@ -147,8 +201,48 @@ if ($from == 'shop') {
         </div>
     </div>
 
+    <footer class="bg-white border-t border-slate-200 py-10 mt-12">
+        <div class="container mx-auto px-6 text-center">
+            <p class="font-bold text-slate-800 text-lg mb-2">MarketPlace</p>
+            <p class="text-slate-500 text-sm">&copy; 2025 Daniel & Aldwin.</p>
+        </div>
+    </footer>
+
     <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const transitionEl = document.getElementById('page-transition');
+        window.addEventListener('pageshow', function(event) {
+            if (transitionEl) transitionEl.classList.add('page-loaded');
+        });
+        setTimeout(() => {
+            if (transitionEl) transitionEl.classList.add('page-loaded');
+        }, 100);
+        const links = document.querySelectorAll('a');
+        links.forEach(link => {
+            link.addEventListener('click', function(e) {
+                const href = this.getAttribute('href');
+                const target = this.getAttribute('target');
+                if (!href || href.startsWith('#') || href.startsWith('javascript') || target === '_blank') {
+                    return;
+                }
+                const currentUrl = new URL(window.location.href);
+                const targetUrl = new URL(href, window.location.origin);
+                if (currentUrl.pathname === targetUrl.pathname && currentUrl.origin === targetUrl.origin) {
+                    return;
+                }
+                e.preventDefault();
+                transitionEl.classList.remove('page-loaded');
+                setTimeout(() => {
+                    window.location.href = href;
+                }, 500);
+            });
+        });
+    });
+
     $(document).ready(function() {
+        $('#navProfileTrigger').click(function(e){ e.stopPropagation(); $('#navProfileDropdown').slideToggle(150); $('#navChevron').toggleClass('rotate-180'); });
+        $(document).click(function(){ $('#navProfileDropdown').slideUp(150); $('#navChevron').removeClass('rotate-180'); });
+
         loadUserData();
 
         function loadUserData() {

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Dec 07, 2025 at 08:26 AM
+-- Generation Time: Dec 13, 2025 at 01:18 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -40,8 +40,7 @@ CREATE TABLE `cart` (
 --
 
 INSERT INTO `cart` (`id`, `user_id`, `product_id`, `quantity`, `created_at`) VALUES
-(1, 3, 2, 1, '2025-12-03 14:52:47'),
-(2, 3, 1, 1, '2025-12-03 14:53:42');
+(8, 8, 2, 2, '2025-12-07 09:17:43');
 
 -- --------------------------------------------------------
 
@@ -92,7 +91,11 @@ CREATE TABLE `orders` (
 --
 
 INSERT INTO `orders` (`id`, `user_id`, `invoice_number`, `total_harga`, `metode_pembayaran`, `status`, `created_at`) VALUES
-(3, 4, 'INV-1764835708-4', 501000.00, '', 'completed', '2025-12-04 08:08:28');
+(3, 4, 'INV-1764835708-4', 501000.00, '', 'completed', '2025-12-04 08:08:28'),
+(4, 8, 'INV-1765092588-8', 501000.00, '', 'completed', '2025-12-07 07:29:48'),
+(5, 3, 'INV-1765111228-3', 15000000.00, '', 'completed', '2025-12-07 12:40:28'),
+(6, 3, 'INV-1765624477-3', 15000000.00, '', 'paid', '2025-12-13 11:14:37'),
+(7, 4, 'INV-1765626845-4', 250000.00, '', 'paid', '2025-12-13 11:54:05');
 
 -- --------------------------------------------------------
 
@@ -114,7 +117,11 @@ CREATE TABLE `order_items` (
 --
 
 INSERT INTO `order_items` (`id`, `order_id`, `product_id`, `quantity`, `harga_satuan`, `subtotal`) VALUES
-(3, 3, 2, 2, 250000.00, 500000.00);
+(3, 3, 2, 2, 250000.00, 500000.00),
+(4, 4, 2, 2, 250000.00, 500000.00),
+(5, 5, 1, 1, 15000000.00, 15000000.00),
+(6, 6, 1, 1, 15000000.00, 15000000.00),
+(7, 7, 2, 1, 250000.00, 250000.00);
 
 -- --------------------------------------------------------
 
@@ -140,8 +147,8 @@ CREATE TABLE `products` (
 --
 
 INSERT INTO `products` (`id`, `shop_id`, `category_id`, `nama_produk`, `deskripsi`, `harga`, `stok`, `gambar`, `created_at`, `terjual`) VALUES
-(1, 1, 1, 'Laptop Gaming', NULL, 15000000.00, 5, NULL, '2025-12-03 07:01:00', 0),
-(2, 2, 1, 'ac ', 'ac bekas', 250000.00, 1, '1764752202_1020495149966573698.png', '2025-12-03 08:56:42', 2);
+(1, 1, 1, 'Laptop Gaming', NULL, 15000000.00, 3, NULL, '2025-12-03 07:01:00', 2),
+(2, 2, 1, 'ac ', 'ac bekas', 250000.00, 2, '1764752202_1020495149966573698.png', '2025-12-03 08:56:42', 5);
 
 -- --------------------------------------------------------
 
@@ -163,7 +170,9 @@ CREATE TABLE `product_reviews` (
 --
 
 INSERT INTO `product_reviews` (`id`, `user_id`, `product_id`, `rating`, `review`, `created_at`) VALUES
-(1, 4, 2, 4, 'ril', '2025-12-04 08:08:38');
+(1, 4, 2, 4, 'ril', '2025-12-04 08:08:38'),
+(2, 8, 2, 4, 'wow', '2025-12-07 07:30:02'),
+(3, 3, 1, 5, 'w', '2025-12-07 12:40:58');
 
 -- --------------------------------------------------------
 
@@ -213,9 +222,10 @@ CREATE TABLE `users` (
 INSERT INTO `users` (`id`, `username`, `password`, `nama_lengkap`, `email`, `role`, `created_at`, `balance`) VALUES
 (1, 'admin', '$2y$10$bNFBY.zyfxLB/QrZvaFCqO/ejq5v.9WCez9nrhB2OF3XbI2YwrXIy', 'Super Admin', NULL, 'admin', '2025-12-03 07:01:00', 0.00),
 (2, 'daniel', '$2y$10$UnX.k.k.k.k.k.k.k.k.k.k.k.k.k.k.k.k.k.k.k.k.k.k.k', 'Daniel Alvino', NULL, 'member', '2025-12-03 07:01:00', 0.00),
-(3, 'alek', '$2y$10$Utu7hJakh/3dc4x6k/LgyuNTTLrRRHy2h.QBQWxMCcyhSJFOywjVm', 'michael ali', 'c14240126@john.petra.ac.id', 'member', '2025-12-03 07:01:56', 0.00),
-(4, 'wana', '$2y$10$aTTBO0pW.DyHYzOPOziLSOIO6s92Dt5kvFm4FmKh/59Zh93NVq.Se', 'michael ali', 'wana@gmail.com', 'member', '2025-12-03 15:18:12', 599000.00),
-(7, 'ali', '$2y$10$UA8V0B3OUnSZ5MV.J4l84OeiIZlIoPQY05qeLTecOM2wMnfASFYxm', 'michael alek', 'alek123@gmail.com', 'member', '2025-12-04 08:21:10', 0.00);
+(3, 'alek', '$2y$10$Utu7hJakh/3dc4x6k/LgyuNTTLrRRHy2h.QBQWxMCcyhSJFOywjVm', 'michael ali', 'c14240126@john.petra.ac.id', 'member', '2025-12-03 07:01:56', 20031111.00),
+(4, 'wana', '$2y$10$aTTBO0pW.DyHYzOPOziLSOIO6s92Dt5kvFm4FmKh/59Zh93NVq.Se', 'michael ali', 'wana@gmail.com', 'member', '2025-12-03 15:18:12', 349000.00),
+(7, 'ali', '$2y$10$UA8V0B3OUnSZ5MV.J4l84OeiIZlIoPQY05qeLTecOM2wMnfASFYxm', 'michael alek', 'alek123@gmail.com', 'member', '2025-12-04 08:21:10', 0.00),
+(8, 'mike', '$2y$10$Vtyxrgl6bof7sPLwGbB2veBC/TKE6FJxiZz8mkFrBVbToTS3VRnXu', 'michael ali', 'daniel@gmail.com', 'member', '2025-12-07 07:28:57', 9499000.00);
 
 --
 -- Indexes for dumped tables
@@ -289,7 +299,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `cart`
 --
 ALTER TABLE `cart`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `categories`
@@ -301,13 +311,13 @@ ALTER TABLE `categories`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `products`
@@ -319,7 +329,7 @@ ALTER TABLE `products`
 -- AUTO_INCREMENT for table `product_reviews`
 --
 ALTER TABLE `product_reviews`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `shops`
@@ -331,7 +341,7 @@ ALTER TABLE `shops`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- Constraints for dumped tables

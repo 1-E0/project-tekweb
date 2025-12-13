@@ -2,23 +2,30 @@
 session_start();
 require_once '../config/Database.php';
 
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit;
-}
+if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit; }
 
 $user_id = $_SESSION['user_id'];
 $nama = $_SESSION['nama'];
 $role = $_SESSION['role'];
-$has_shop = false; 
+$has_shop = false;
 $nav_balance = 0;
 
 $database = new Database();
 $db = $database->getConnection();
 
+if ($role == 'member') {
+    $stmt = $db->prepare("SELECT id FROM shops WHERE user_id = ? LIMIT 1");
+    $stmt->execute([$user_id]);
+    if ($stmt->rowCount() > 0) $has_shop = true;
+}
+
 $stmt_bal = $db->prepare("SELECT balance FROM users WHERE id = ?");
 $stmt_bal->execute([$user_id]);
 $nav_balance = $stmt_bal->fetchColumn() ?: 0;
+
+$stmt_orders = $db->prepare("SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC");
+$stmt_orders->execute([$user_id]);
+$orders = $stmt_orders->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -26,16 +33,17 @@ $nav_balance = $stmt_bal->fetchColumn() ?: 0;
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buka Toko Gratis</title>
+    <title>Pesanan Saya</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>
-<body class="bg-slate-50 min-h-screen text-slate-700">
-    
-    <nav class="glass sticky top-0 z-50 transition-all duration-300 mb-8">
+<body class="bg-slate-50 text-slate-800">
+    <div id="page-transition"></div>
+
+    <nav class="glass sticky top-0 z-50 transition-all duration-300">
         <div class="container mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-4">
             <a href="../index.php" class="flex items-center gap-2 flex-shrink-0 group">
                 <div class="bg-gradient-to-br from-blue-600 to-indigo-600 text-white p-2.5 rounded-xl shadow-lg shadow-blue-200 group-hover:scale-105 transition duration-300">
@@ -61,6 +69,7 @@ $nav_balance = $stmt_bal->fetchColumn() ?: 0;
                 <a href="cart.php" class="text-slate-500 hover:text-blue-600 p-2 relative transition">
                     <i class="fas fa-shopping-cart text-xl"></i>
                 </a>
+
                 <div class="relative">
                     <button id="navProfileTrigger" class="flex items-center gap-2 hover:bg-white/50 p-1 pr-3 rounded-full transition border border-transparent hover:border-slate-200">
                         <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm border-2 border-white shadow-sm">
@@ -83,7 +92,11 @@ $nav_balance = $stmt_bal->fetchColumn() ?: 0;
                                 <span class="font-bold text-blue-600">Rp <?php echo number_format($nav_balance, 0, ',', '.'); ?></span>
                                 <span class="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded ml-auto">+ Top Up</span>
                             </button>
-                            <a href="create_shop.php" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition"><i class="fas fa-store w-5"></i> Buka Toko</a>
+                            <?php if($has_shop): ?>
+                                <a href="manage_products.php" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition"><i class="fas fa-store w-5"></i> Toko Saya</a>
+                            <?php elseif($role != 'admin'): ?>
+                                <a href="create_shop.php" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition"><i class="fas fa-store w-5"></i> Buka Toko</a>
+                            <?php endif; ?>
                             <a href="my_orders.php" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition"><i class="fas fa-history w-5"></i> Riwayat Belanja</a>
                             <a href="settings.php" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition"><i class="fas fa-cog w-5"></i> Pengaturan</a>
                             <div class="h-px bg-slate-100 my-1 mx-2"></div>
@@ -95,87 +108,109 @@ $nav_balance = $stmt_bal->fetchColumn() ?: 0;
         </div>
     </nav>
 
-    <div class="flex items-center justify-center py-10">
-        <div class="bg-white p-8 md:p-10 rounded-xl shadow-xl w-full max-w-lg border border-slate-100 animate-enter relative">
-            
-            <div class="absolute top-0 right-0 p-4 opacity-10 text-blue-600">
-                <i class="fas fa-store text-9xl"></i>
-            </div>
-
-            <div class="mb-6 relative z-10">
-                <h1 class="text-3xl font-bold text-slate-800 mb-2">Mulai Bisnismu!</h1>
-                <p class="text-slate-500">Isi data di bawah ini untuk membuka toko.</p>
-            </div>
-            
-            <form id="createShopForm" class="space-y-4 relative z-10">
-                <input type="hidden" name="action" value="create_shop">
+    <div class="container mx-auto px-6 py-10 max-w-4xl">
+        <div class="mb-6">
+            <button onclick="history.back()" class="group inline-flex items-center gap-2 text-slate-500 hover:text-blue-600 transition-colors duration-200 font-medium text-sm">
+                <div class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center shadow-sm group-hover:border-blue-200 group-hover:bg-blue-50 transition-all">
+                    <i class="fas fa-arrow-left text-xs"></i>
+                </div>
+                Kembali
+            </button>
+        </div>
+        <h1 class="text-2xl font-bold mb-6 text-slate-800">Riwayat Belanja</h1>
+        
+        <div class="space-y-4">
+            <?php foreach($orders as $o): ?>
+            <div class="glass p-6 rounded-xl bg-white border border-slate-100 animate-enter">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <div class="font-bold text-lg text-slate-800">Order #<?php echo $o['invoice_number']; ?></div>
+                        <div class="text-sm text-slate-500"><?php echo date('d M Y H:i', strtotime($o['created_at'])); ?></div>
+                    </div>
+                    <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide shadow-sm
+                        <?php echo $o['status']=='completed'?'bg-green-100 text-green-700 border border-green-200':($o['status']=='shipped'?'bg-blue-100 text-blue-700 border border-blue-200':'bg-yellow-100 text-yellow-700 border border-yellow-200'); ?>">
+                        <?php echo $o['status']; ?>
+                    </span>
+                </div>
                 
-                <div>
-                    <label class="block text-sm font-semibold mb-1 text-slate-600">Nama Toko</label>
-                    <div class="relative">
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fas fa-tag"></i></span>
-                        <input type="text" name="nama_toko" class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"  required>
-                    </div>
+                <div class="flex justify-between items-center pt-4 border-t border-slate-50">
+                    <div class="font-bold text-blue-600 text-lg">Rp <?php echo number_format($o['total_harga']); ?></div>
+                    
+                    <?php if($o['status'] == 'shipped'): ?>
+                        <button onclick="confirmOrder(<?php echo $o['id']; ?>)" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg text-sm font-bold transition shadow-lg shadow-green-200 transform hover:-translate-y-0.5">
+                            <i class="fas fa-check-circle mr-1"></i> Pesanan Diterima
+                        </button>
+                    <?php endif; ?>
                 </div>
-
-                <div>
-                    <label class="block text-sm font-semibold mb-1 text-slate-600">Alamat Toko</label>
-                    <div class="relative">
-                        <span class="absolute top-3 left-0 flex items-start pl-3 text-slate-400"><i class="fas fa-map-marker-alt"></i></span>
-                        <textarea name="alamat_toko" class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm" rows="2" required></textarea>
-                    </div>
+            </div>
+            <?php endforeach; ?>
+            
+            <?php if(empty($orders)): ?>
+                <div class="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-300">
+                    <i class="fas fa-shopping-bag text-4xl text-slate-300 mb-4"></i>
+                    <p class="text-slate-500 font-medium">Belum ada riwayat pesanan.</p>
+                    <a href="browse.php" class="text-blue-600 font-bold hover:underline text-sm mt-2 inline-block">Mulai Belanja</a>
                 </div>
-
-                <div>
-                    <label class="block text-sm font-semibold mb-1 text-slate-600">Deskripsi </label>
-                    <textarea name="deskripsi_toko" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm" rows="3" ></textarea>
-                </div>
-
-                <button type="submit" id="btnSave" class="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-all shadow-md flex justify-center items-center gap-2">
-                    <i class="fas fa-paper-plane"></i> Buka Toko Sekarang
-                </button>
-            </form>
+            <?php endif; ?>
         </div>
     </div>
 
     <script>
-    $(document).ready(function() {
-        $('#navProfileTrigger').click(function(e){ e.stopPropagation(); $('#navProfileDropdown').slideToggle(150); $('#navChevron').toggleClass('rotate-180'); });
-        $(document).click(function(){ $('#navProfileDropdown').slideUp(150); $('#navChevron').removeClass('rotate-180'); });
-
-        $('#createShopForm').submit(function(e) {
-            e.preventDefault();
-            
-            let btn = $('#btnSave');
-            btn.prop('disabled', true).text('Memproses...');
-
-            $.ajax({
-                url: '../api/shop.php',
-                type: 'POST',
-                data: $(this).serialize(),
-                dataType: 'json',
-                success: function(response) {
-                    if (response.status === 'success') {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Selamat!',
-                            text: 'Tokomu berhasil dibuat.',
-                            confirmButtonColor: '#2563EB'
-                        }).then(() => {
-                            window.location.href = 'manage_products.php';
-                        });
-                    } else {
-                        Swal.fire('Gagal', response.message, 'error');
-                        btn.prop('disabled', false).html('<i class="fas fa-paper-plane"></i> Buka Toko Sekarang');
-                    }
-                },
-                error: function() {
-                    Swal.fire('Error', 'Terjadi kesalahan sistem', 'error');
-                    btn.prop('disabled', false).html('<i class="fas fa-paper-plane"></i> Buka Toko Sekarang');
+    document.addEventListener("DOMContentLoaded", function() {
+        const transitionEl = document.getElementById('page-transition');
+        window.addEventListener('pageshow', function(event) {
+            if (transitionEl) transitionEl.classList.add('page-loaded');
+        });
+        setTimeout(() => {
+            if (transitionEl) transitionEl.classList.add('page-loaded');
+        }, 50);
+        const links = document.querySelectorAll('a');
+        links.forEach(link => {
+            link.addEventListener('click', function(e) {
+                const href = this.getAttribute('href');
+                const target = this.getAttribute('target');
+                if (!href || href.startsWith('#') || href.startsWith('javascript') || target === '_blank') {
+                    return;
                 }
+                const currentUrl = new URL(window.location.href);
+                const targetUrl = new URL(href, window.location.origin);
+                if (currentUrl.pathname === targetUrl.pathname && currentUrl.origin === targetUrl.origin) {
+                    return;
+                }
+                e.preventDefault();
+                transitionEl.classList.remove('page-loaded');
+                setTimeout(() => {
+                    window.location.href = href;
+                }, 500);
             });
         });
     });
+
+    $(document).ready(function(){
+        $('#navProfileTrigger').click(function(e){ e.stopPropagation(); $('#navProfileDropdown').slideToggle(150); $('#navChevron').toggleClass('rotate-180'); });
+        $(document).click(function(){ $('#navProfileDropdown').slideUp(150); $('#navChevron').removeClass('rotate-180'); });
+    });
+
+    function confirmOrder(id) {
+        Swal.fire({
+            title: 'Pesanan Diterima?',
+            text: "Konfirmasi barang sudah sampai dengan aman.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Diterima',
+            confirmButtonColor: '#10B981'
+        }).then((res) => {
+            if(res.isConfirmed) {
+                $.post('../api/order.php', { action: 'update_status', order_id: id, status: 'completed' }, function(data){
+                    if(data.status === 'success') {
+                         Swal.fire('Sukses', 'Status pesanan diperbarui!', 'success').then(() => location.reload());
+                    } else {
+                        Swal.fire('Error', 'Gagal update status', 'error');
+                    }
+                }, 'json');
+            }
+        });
+    }
 
     function openTopUp() {
         Swal.fire({

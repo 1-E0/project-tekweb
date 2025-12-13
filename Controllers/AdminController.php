@@ -9,23 +9,18 @@ class AdminController {
         $this->conn = $database->getConnection();
     }
 
-    
     public function getDashboardStats() {
-        
         $stmtUser = $this->conn->query("SELECT COUNT(*) FROM users WHERE role != 'admin'");
-        $totalUser = $stmtUser->fetchColumn();
+        $totalUser = $stmtUser ? $stmtUser->fetchColumn() : 0;
 
-        
         $stmtRev = $this->conn->query("SELECT SUM(total_harga) FROM orders WHERE status = 'completed'");
-        $totalRev = $stmtRev->fetchColumn();
+        $totalRev = $stmtRev ? $stmtRev->fetchColumn() : 0;
 
-        
         $stmtShop = $this->conn->query("SELECT COUNT(*) FROM shops");
-        $totalShop = $stmtShop->fetchColumn();
+        $totalShop = $stmtShop ? $stmtShop->fetchColumn() : 0;
 
-        
         $stmtProd = $this->conn->query("SELECT COUNT(*) FROM products");
-        $totalProd = $stmtProd->fetchColumn();
+        $totalProd = $stmtProd ? $stmtProd->fetchColumn() : 0;
 
         return [
             'users' => $totalUser,
@@ -33,6 +28,16 @@ class AdminController {
             'shops' => $totalShop,
             'products' => $totalProd
         ];
+    }
+
+    public function getRecentOrders() {
+        $sql = "SELECT o.invoice_number, o.total_harga, o.status, o.created_at, u.nama_lengkap 
+                FROM orders o 
+                JOIN users u ON o.user_id = u.id 
+                ORDER BY o.created_at DESC LIMIT 5";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function getAllUsers() {

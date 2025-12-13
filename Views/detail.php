@@ -17,18 +17,26 @@ $reviews = $reviewObj->getReviews($id);
 
 $is_logged_in = isset($_SESSION['user_id']);
 $can_review = false;
-if($is_logged_in){
-    $can_review = $reviewObj->canReview($_SESSION['user_id'], $id);
-}
-// Ambil data user untuk navbar (jika login)
+$user_id = $_SESSION['user_id'] ?? null;
 $nama = $_SESSION['nama'] ?? 'Pengunjung';
 $role = $_SESSION['role'] ?? 'guest';
 $has_shop = false;
-if($is_logged_in && $role == 'member') {
-    $db = (new Database())->getConnection();
-    $stmt = $db->prepare("SELECT id FROM shops WHERE user_id = ? LIMIT 1");
-    $stmt->execute([$_SESSION['user_id']]);
-    if($stmt->rowCount() > 0) $has_shop = true;
+$nav_balance = 0;
+
+if ($is_logged_in) {
+    $database = new Database();
+    $db = $database->getConnection();
+
+    if($role == 'member') {
+        $stmt = $db->prepare("SELECT id FROM shops WHERE user_id = ? LIMIT 1");
+        $stmt->execute([$user_id]);
+        if($stmt->rowCount() > 0) $has_shop = true;
+    }
+    $can_review = $reviewObj->canReview($user_id, $id);
+
+    $stmt_bal = $db->prepare("SELECT balance FROM users WHERE id = ?");
+    $stmt_bal->execute([$user_id]);
+    $nav_balance = $stmt_bal->fetchColumn() ?: 0;
 }
 ?>
 
@@ -47,32 +55,85 @@ if($is_logged_in && $role == 'member') {
     <style> .star-rating i { cursor: pointer; transition: color 0.2s; } .star-rating i.active { color: #FBBF24; } </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
+    <div id="page-transition"></div>
 
     <nav class="glass sticky top-0 z-50 transition-all duration-300">
         <div class="container mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-4">
-            <a href="javascript:history.back()" class="flex items-center gap-2 text-slate-600 hover:text-blue-600 transition">
-                <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm border border-slate-100 hover:bg-blue-50">
-                    <i class="fas fa-arrow-left"></i>
+            <a href="../index.php" class="flex items-center gap-2 flex-shrink-0 group">
+                <div class="bg-gradient-to-br from-blue-600 to-indigo-600 text-white p-2.5 rounded-xl shadow-lg shadow-blue-200 group-hover:scale-105 transition duration-300">
+                    <i class="fas fa-shopping-bag text-lg"></i>
                 </div>
-                <span class="font-bold hidden md:block">Kembali</span>
+                <span class="text-xl font-extrabold text-slate-800 tracking-tight hidden md:block">MarketPlace</span>
             </a>
-            
-            <a href="../index.php" class="text-xl font-extrabold text-slate-800 tracking-tight">MarketPlace</a>
 
-            <div class="flex items-center gap-4">
-                <a href="cart.php" class="relative p-2 text-slate-500 hover:text-blue-600 transition">
-                    <i class="fas fa-shopping-cart text-xl"></i>
-                </a>
-                <?php if($is_logged_in): ?>
-                <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm border-2 border-white shadow-sm">
-                    <?php echo strtoupper(substr($nama, 0, 1)); ?>
-                </div>
+            <div class="flex-1 max-w-2xl mx-4">
+                <form action="browse.php" method="GET" class="relative group">
+                    <input type="text" name="search" class="w-full input-modern rounded-full py-2.5 pl-12 pr-6 text-sm" placeholder="Cari produk impianmu...">
+                    <i class="fas fa-search absolute left-4 top-3 text-slate-400 group-focus-within:text-blue-500 transition"></i>
+                </form>
+            </div>
+
+            <div class="flex items-center gap-4 flex-shrink-0">
+                <?php if ($is_logged_in): ?>
+                    <button onclick="openTopUp()" class="hidden md:flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-full transition font-bold text-xs border border-blue-100 group">
+                        <i class="fas fa-wallet text-lg group-hover:scale-110 transition"></i>
+                        <span>Rp <?php echo number_format($nav_balance, 0, ',', '.'); ?></span>
+                        <div class="w-4 h-4 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] ml-1"><i class="fas fa-plus"></i></div>
+                    </button>
+
+                    <a href="cart.php" class="relative p-2 text-slate-500 hover:text-blue-600 transition">
+                        <i class="fas fa-shopping-cart text-xl"></i>
+                    </a>
+                    
+                    <div class="relative">
+                        <button id="navProfileTrigger" class="flex items-center gap-2 hover:bg-white/50 p-1 pr-3 rounded-full transition border border-transparent hover:border-slate-200">
+                            <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm border-2 border-white shadow-sm">
+                                <?php echo strtoupper(substr($nama, 0, 1)); ?>
+                            </div>
+                            <span class="text-sm font-semibold text-slate-700 hidden md:block max-w-[100px] truncate"><?php echo htmlspecialchars($nama); ?></span>
+                            <i class="fas fa-chevron-down text-xs text-slate-400 ml-1 transition" id="navChevron"></i>
+                        </button>
+                        <div id="navProfileDropdown" class="hidden absolute right-0 mt-3 w-64 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-enter">
+                            <div class="p-5 border-b border-slate-100 flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-lg"><i class="fas fa-user"></i></div>
+                                <div>
+                                    <p class="font-bold text-slate-800 text-sm"><?php echo htmlspecialchars($nama); ?></p>
+                                    <p class="text-xs text-slate-500 capitalize"><?php echo $role; ?></p>
+                                </div>
+                            </div>
+                            <div class="p-2 space-y-1">
+                                <button onclick="openTopUp()" class="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition md:hidden">
+                                    <i class="fas fa-wallet w-5"></i> 
+                                    <span class="font-bold text-blue-600">Rp <?php echo number_format($nav_balance, 0, ',', '.'); ?></span>
+                                    <span class="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded ml-auto">+ Top Up</span>
+                                </button>
+                                <?php if($has_shop): ?>
+                                    <a href="manage_products.php" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition"><i class="fas fa-store w-5"></i> Toko Saya</a>
+                                <?php elseif($role != 'admin'): ?>
+                                    <a href="create_shop.php" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition"><i class="fas fa-store w-5"></i> Buka Toko</a>
+                                <?php endif; ?>
+                                <a href="my_orders.php" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition"><i class="fas fa-history w-5"></i> Riwayat Belanja</a>
+                                <a href="settings.php" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition"><i class="fas fa-cog w-5"></i> Pengaturan</a>
+                                <div class="h-px bg-slate-100 my-1 mx-2"></div>
+                                <a href="../logout.php" class="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl transition"><i class="fas fa-sign-out-alt w-5"></i> Keluar</a>
+                            </div>
+                        </div>
+                    </div>
                 <?php endif; ?>
             </div>
         </div>
     </nav>
 
     <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <div class="mb-6">
+            <button onclick="history.back()" class="group inline-flex items-center gap-2 text-slate-500 hover:text-blue-600 transition-colors duration-200 font-medium text-sm">
+                <div class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center shadow-sm group-hover:border-blue-200 group-hover:bg-blue-50 transition-all">
+                    <i class="fas fa-arrow-left text-xs"></i>
+                </div>
+                Kembali
+            </button>
+        </div>
+
         <div class="glass rounded-3xl p-6 md:p-10 mb-8 animate-enter">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
                 
@@ -216,9 +277,45 @@ if($is_logged_in && $role == 'member') {
         </div>
     </div>
 
+    <footer class="bg-white border-t border-slate-200 py-10 mt-12">
+        <div class="container mx-auto px-6 text-center">
+            <p class="font-bold text-slate-800 text-lg mb-2">MarketPlace</p>
+            <p class="text-slate-500 text-sm">&copy; 2025 Daniel & Aldwin.</p>
+        </div>
+    </footer>
+
     <script>
         const isLoggedIn = <?php echo $is_logged_in ? 'true' : 'false'; ?>;
         const maxStock = <?php echo $product['stok']; ?>;
+        document.addEventListener("DOMContentLoaded", function() {
+            const transitionEl = document.getElementById('page-transition');
+            window.addEventListener('pageshow', function(event) {
+                if (transitionEl) transitionEl.classList.add('page-loaded');
+            });
+            setTimeout(() => {
+                if (transitionEl) transitionEl.classList.add('page-loaded');
+            }, 50);
+            const links = document.querySelectorAll('a');
+            links.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    const href = this.getAttribute('href');
+                    const target = this.getAttribute('target');
+                    if (!href || href.startsWith('#') || href.startsWith('javascript') || target === '_blank') {
+                        return;
+                    }
+                    const currentUrl = new URL(window.location.href);
+                    const targetUrl = new URL(href, window.location.origin);
+                    if (currentUrl.pathname === targetUrl.pathname && currentUrl.origin === targetUrl.origin) {
+                        return;
+                    }
+                    e.preventDefault();
+                    transitionEl.classList.remove('page-loaded');
+                    setTimeout(() => {
+                        window.location.href = href;
+                    }, 500);
+                });
+            });
+        });
         $(document).ready(function(){
             $('.star-rating i').click(function(){
                 let val = $(this).data('val');
@@ -236,6 +333,8 @@ if($is_logged_in && $role == 'member') {
                     }
                 });
             });
+            $('#navProfileTrigger').click(function(e){ e.stopPropagation(); $('#navProfileDropdown').slideToggle(150); $('#navChevron').toggleClass('rotate-180'); });
+            $(document).click(function(){ $('#navProfileDropdown').slideUp(150); $('#navChevron').removeClass('rotate-180'); });
         });
         function changeQty(amount) {
             let input = $('#qtyInput'); let currentVal = parseInt(input.val()); let newVal = currentVal + amount;
@@ -257,6 +356,30 @@ if($is_logged_in && $role == 'member') {
                     } else { Swal.fire('Gagal', response.message, 'error'); }
                 },
                 error: function() { btn.html(originalText).prop('disabled', false); Swal.fire('Error', 'Gagal menghubungi server', 'error'); }
+            });
+        }
+
+        function openTopUp() {
+            Swal.fire({
+                title: 'Isi Saldo',
+                input: 'number',
+                inputLabel: 'Masukkan Nominal (Rp)',
+                inputPlaceholder: 'Contoh: 50000',
+                showCancelButton: true,
+                confirmButtonText: 'Top Up',
+                confirmButtonColor: '#2563EB',
+                preConfirm: (amount) => {
+                    if (!amount) Swal.showValidationMessage('Nominal harus diisi');
+                    return amount;
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('../api/user.php', { action: 'topup', amount: result.value }, function(res) {
+                        if(res.status === 'success') {
+                            Swal.fire('Berhasil', 'Saldo bertambah!', 'success').then(() => location.reload());
+                        }
+                    }, 'json');
+                }
             });
         }
     </script>

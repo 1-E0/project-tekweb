@@ -2,12 +2,12 @@
 session_start();
 require_once 'config/Database.php';
 
-// Logika PHP tetap sama
 $is_logged_in = false;
 $role = 'guest';
 $nama = 'Pengunjung';
 $user_id = null;
 $has_shop = false;
+$nav_balance = 0;
 
 if (isset($_SESSION['user_id'])) {
     $is_logged_in = true;
@@ -15,19 +15,24 @@ if (isset($_SESSION['user_id'])) {
     $role = $_SESSION['role']; 
     $nama = $_SESSION['nama'];
 
+    $database = new Database();
+    $db = $database->getConnection();
+
     if ($role == 'member') {
-        $database = new Database();
-        $db = $database->getConnection();
         $query = "SELECT id FROM shops WHERE user_id = :uid LIMIT 1";
         $stmt = $db->prepare($query);
         $stmt->bindParam(':uid', $user_id);
         $stmt->execute();
         if ($stmt->rowCount() > 0) $has_shop = true;
     }
-}
 
-$database = new Database();
-$db = $database->getConnection();
+    $stmt_bal = $db->prepare("SELECT balance FROM users WHERE id = ?");
+    $stmt_bal->execute([$user_id]);
+    $nav_balance = $stmt_bal->fetchColumn() ?: 0;
+} else {
+    $database = new Database();
+    $db = $database->getConnection();
+}
 
 $query_produk = "SELECT p.*, s.nama_toko FROM products p JOIN shops s ON p.shop_id = s.id ORDER BY p.created_at DESC LIMIT 12";
 $stmt_produk = $db->prepare($query_produk);
@@ -67,6 +72,7 @@ function getCategoryIcon($name) {
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body class="text-slate-800">
+    <div id="page-transition"></div>
 
     <nav class="glass sticky top-0 z-50 transition-all duration-300">
         <div class="container mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-4">
@@ -81,16 +87,23 @@ function getCategoryIcon($name) {
                 <form action="views/browse.php" method="GET" class="relative group">
                     <input type="text" name="search"
                            class="w-full input-modern rounded-full py-2.5 pl-12 pr-6 text-sm" 
-                           placeholder="Cari produk impianmu...">
+                           placeholder="">
                     <i class="fas fa-search absolute left-4 top-3 text-slate-400 group-focus-within:text-blue-500 transition"></i>
                 </form>
             </div>
 
             <div class="flex items-center gap-4 flex-shrink-0">
                 <?php if ($is_logged_in): ?>
+                    <button onclick="openTopUp()" class="hidden md:flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-full transition font-bold text-xs border border-blue-100 group">
+                        <i class="fas fa-wallet text-lg group-hover:scale-110 transition"></i>
+                        <span>Rp <?php echo number_format($nav_balance, 0, ',', '.'); ?></span>
+                        <div class="w-4 h-4 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] ml-1"><i class="fas fa-plus"></i></div>
+                    </button>
+
                     <a href="views/cart.php" class="text-slate-500 hover:text-blue-600 p-2 relative transition">
                         <i class="fas fa-shopping-cart text-xl"></i>
                     </a>
+                    
                     <div class="relative">
                         <button id="navProfileTrigger" class="flex items-center gap-2 hover:bg-white/50 p-1 pr-3 rounded-full transition border border-transparent hover:border-slate-200">
                             <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm border-2 border-white shadow-sm">
@@ -108,11 +121,17 @@ function getCategoryIcon($name) {
                                 </div>
                             </div>
                             <div class="p-2 space-y-1">
+                                <button onclick="openTopUp()" class="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition md:hidden">
+                                    <i class="fas fa-wallet w-5"></i> 
+                                    <span class="font-bold text-blue-600">Rp <?php echo number_format($nav_balance, 0, ',', '.'); ?></span>
+                                    <span class="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded ml-auto">+ Top Up</span>
+                                </button>
                                 <?php if($has_shop): ?>
                                     <a href="views/manage_products.php" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition"><i class="fas fa-store w-5"></i> Toko Saya</a>
                                 <?php elseif($role != 'admin'): ?>
                                     <a href="views/create_shop.php" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition"><i class="fas fa-store w-5"></i> Buka Toko</a>
                                 <?php endif; ?>
+                                <a href="views/my_orders.php" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition"><i class="fas fa-history w-5"></i> Riwayat Belanja</a>
                                 <a href="views/settings.php" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition"><i class="fas fa-cog w-5"></i> Pengaturan</a>
                                 <div class="h-px bg-slate-100 my-1 mx-2"></div>
                                 <a href="logout.php" class="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl transition"><i class="fas fa-sign-out-alt w-5"></i> Keluar</a>
@@ -179,8 +198,8 @@ function getCategoryIcon($name) {
         </div>
 
         <div id="produk-terbaru" class="animate-enter" style="animation-delay: 0.5s">
-            <h2 class="text-2xl font-bold text-slate-900 mb-2">Rekomendasi Terbaru</h2>
-            <p class="text-slate-500 mb-6">Barang pilihan yang baru saja diupload.</p>
+            <h2 class="text-2xl font-bold text-slate-900 mb-2">Rekomendasi</h2>
+            
 
             <?php if (count($products) > 0): ?>
                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -227,15 +246,69 @@ function getCategoryIcon($name) {
     <footer class="bg-white border-t border-slate-200 py-10 mt-12">
         <div class="container mx-auto px-6 text-center">
             <p class="font-bold text-slate-800 text-lg mb-2">MarketPlace</p>
-            <p class="text-slate-500 text-sm">&copy; 2025 Daniel & Aldwin. All rights reserved.</p>
+            <p class="text-slate-500 text-sm">&copy; 2025 Daniel & Aldwin.</p>
         </div>
     </footer>
 
     <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const transitionEl = document.getElementById('page-transition');
+            window.addEventListener('pageshow', function(event) {
+                if (transitionEl) transitionEl.classList.add('page-loaded');
+            });
+            setTimeout(() => {
+                if (transitionEl) transitionEl.classList.add('page-loaded');
+            }, 50);
+            const links = document.querySelectorAll('a');
+            links.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    const href = this.getAttribute('href');
+                    const target = this.getAttribute('target');
+                    if (!href || href.startsWith('#') || href.startsWith('javascript') || target === '_blank') {
+                        return;
+                    }
+                    const currentUrl = new URL(window.location.href);
+                    const targetUrl = new URL(href, window.location.origin);
+                    if (currentUrl.pathname === targetUrl.pathname && currentUrl.origin === targetUrl.origin) {
+                        return;
+                    }
+                    e.preventDefault();
+                    transitionEl.classList.remove('page-loaded');
+                    setTimeout(() => {
+                        window.location.href = href;
+                    }, 500);
+                });
+            });
+        });
+
         $(document).ready(function(){
             $('#navProfileTrigger').click(function(e){ e.stopPropagation(); $('#navProfileDropdown').slideToggle(150); $('#navChevron').toggleClass('rotate-180'); });
             $(document).click(function(){ $('#navProfileDropdown').slideUp(150); $('#navChevron').removeClass('rotate-180'); });
         });
+
+        function openTopUp() {
+            Swal.fire({
+                title: 'Isi Saldo',
+                input: 'number',
+                inputLabel: 'Masukkan Nominal (Rp)',
+                inputPlaceholder: 'Contoh: 50000',
+                showCancelButton: true,
+                confirmButtonText: 'Top Up',
+                confirmButtonColor: '#2563EB',
+                preConfirm: (amount) => {
+                    if (!amount) Swal.showValidationMessage('Nominal harus diisi');
+                    return amount;
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('api/user.php', { action: 'topup', amount: result.value }, function(res) {
+                        if(res.status === 'success') {
+                            Swal.fire('Berhasil', 'Saldo bertambah!', 'success').then(() => location.reload());
+                        }
+                    }, 'json');
+                }
+            });
+        }
     </script>
 </body>
 </html>

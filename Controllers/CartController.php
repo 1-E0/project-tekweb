@@ -13,7 +13,17 @@ class CartController {
    
     public function addToCart($userId, $productId, $qty = 1) {
         
-        
+        $checkOwner = "SELECT s.user_id FROM products p 
+                       JOIN shops s ON p.shop_id = s.id 
+                       WHERE p.id = :pid LIMIT 1";
+        $stmtOwner = $this->conn->prepare($checkOwner);
+        $stmtOwner->execute([':pid' => $productId]);
+        $ownerId = $stmtOwner->fetchColumn();
+
+        if ($ownerId == $userId) {
+            return json_encode(['status' => 'error', 'message' => 'Anda tidak dapat membeli barang dagangan sendiri!']);
+        }
+
         $stockQuery = "SELECT stok FROM products WHERE id = :pid";
         $stockStmt = $this->conn->prepare($stockQuery);
         $stockStmt->execute([':pid' => $productId]);
