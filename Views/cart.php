@@ -26,9 +26,6 @@ $nav_balance = $stmt_bal->fetchColumn() ?: 0;
 
 $cartController = new CartController();
 $cartItems = $cartController->getCart($user_id);
-
-$subtotal = 0;
-foreach($cartItems as $item) { $subtotal += ($item['harga'] * $item['quantity']); }
 ?>
 
 <!DOCTYPE html>
@@ -128,81 +125,75 @@ foreach($cartItems as $item) { $subtotal += ($item['harga'] * $item['quantity'])
         <h1 class="text-2xl font-bold text-slate-900 mb-8 animate-enter">Keranjang Belanja</h1>
 
         <?php if(count($cartItems) > 0): ?>
-        <div class="flex flex-col lg:flex-row gap-8">
-            <div class="flex-1 space-y-4 animate-enter" style="animation-delay: 0.1s">
-                <div class="glass rounded-2xl p-4 flex items-center justify-between shadow-sm">
-                    <div class="flex items-center gap-3">
-                        <input type="checkbox" checked class="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
-                        <span class="text-sm font-semibold text-slate-700">Pilih Semua (<?php echo count($cartItems); ?>)</span>
+        <form action="checkout.php" method="POST" id="checkoutForm">
+            <div class="flex flex-col lg:flex-row gap-8">
+                <div class="flex-1 space-y-4 animate-enter" style="animation-delay: 0.1s">
+                    <div class="glass rounded-2xl p-4 flex items-center justify-between shadow-sm">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" id="checkAll" checked class="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer">
+                            <label for="checkAll" class="text-sm font-semibold text-slate-700 cursor-pointer">Pilih Semua</label>
+                        </div>
                     </div>
-                    <button class="text-red-500 font-bold text-sm hover:text-red-600 transition">Hapus</button>
-                </div>
 
-                <?php foreach($cartItems as $item): ?>
-                <div class="bg-white rounded-2xl border border-slate-100 p-5 flex gap-4 items-start shadow-sm hover:shadow-md transition duration-300">
-                    <div class="pt-8">
-                        <input type="checkbox" checked class="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
-                    </div>
-                    <div class="w-28 h-28 bg-slate-50 rounded-xl overflow-hidden flex-shrink-0 border border-slate-100">
-                        <img src="../assets/images/<?php echo $item['gambar']; ?>" class="w-full h-full object-cover">
-                    </div>
-                    <div class="flex-1 flex flex-col justify-between h-28">
-                        <div>
-                            <div class="flex justify-between items-start">
-                                <h3 class="font-bold text-slate-800 text-base line-clamp-1 mr-4">
-                                    <?php echo htmlspecialchars($item['nama_produk']); ?>
-                                </h3>
-                                <button onclick="deleteItem(<?php echo $item['cart_id']; ?>)" class="text-slate-400 hover:text-red-500 transition p-1">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                            </div>
-                            <div class="flex items-center gap-2 mt-1">
-                                <div class="w-5 h-5 rounded-full bg-blue-50 flex items-center justify-center text-xs text-blue-600">
-                                    <i class="fas fa-store"></i>
+                    <?php foreach($cartItems as $item): ?>
+                    <div class="bg-white rounded-2xl border border-slate-100 p-5 flex gap-4 items-start shadow-sm hover:shadow-md transition duration-300">
+                        <div class="pt-8">
+                            <input type="checkbox" name="selected_items[]" value="<?php echo $item['cart_id']; ?>" 
+                                   class="check-item w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                                   data-price="<?php echo $item['harga']; ?>" 
+                                   data-qty="<?php echo $item['quantity']; ?>"
+                                   checked>
+                        </div>
+                        <div class="w-28 h-28 bg-slate-50 rounded-xl overflow-hidden flex-shrink-0 border border-slate-100">
+                            <img src="../assets/images/<?php echo $item['gambar']; ?>" class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex-1 flex flex-col justify-between h-28">
+                            <div>
+                                <div class="flex justify-between items-start">
+                                    <h3 class="font-bold text-slate-800 text-base line-clamp-1 mr-4"><?php echo htmlspecialchars($item['nama_produk']); ?></h3>
+                                    <button type="button" class="btn-delete text-slate-400 hover:text-red-500 transition p-1" data-id="<?php echo $item['cart_id']; ?>">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
                                 </div>
-                                <span class="text-xs font-medium text-slate-500"><?php echo htmlspecialchars($item['nama_toko']); ?></span>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <div class="w-5 h-5 rounded-full bg-blue-50 flex items-center justify-center text-xs text-blue-600"><i class="fas fa-store"></i></div>
+                                    <span class="text-xs font-medium text-slate-500"><?php echo htmlspecialchars($item['nama_toko']); ?></span>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-between items-end">
+                                <p class="text-blue-600 font-extrabold text-lg">Rp <?php echo number_format($item['harga'], 0, ',', '.'); ?></p>
+                                <div class="flex items-center border border-slate-200 rounded-lg bg-slate-50">
+                                    <button type="button" onclick="updateQty(<?php echo $item['cart_id']; ?>, <?php echo $item['quantity'] - 1; ?>)" class="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-white rounded-l-lg transition" <?php echo $item['quantity'] <= 1 ? 'disabled' : ''; ?>><i class="fas fa-minus text-xs"></i></button>
+                                    <input type="text" value="<?php echo $item['quantity']; ?>" class="w-10 text-center text-sm font-bold text-slate-700 bg-transparent outline-none border-x border-slate-200 py-1" readonly>
+                                    <button type="button" onclick="updateQty(<?php echo $item['cart_id']; ?>, <?php echo $item['quantity'] + 1; ?>)" class="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-white rounded-r-lg transition"><i class="fas fa-plus text-xs"></i></button>
+                                </div>
                             </div>
                         </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
 
-                        <div class="flex justify-between items-end">
-                            <p class="text-blue-600 font-extrabold text-lg">Rp <?php echo number_format($item['harga'], 0, ',', '.'); ?></p>
-                            
-                            <div class="flex items-center border border-slate-200 rounded-lg bg-slate-50">
-                                <button onclick="updateQty(<?php echo $item['cart_id']; ?>, <?php echo $item['quantity'] - 1; ?>)" class="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-white rounded-l-lg transition disabled:opacity-50" <?php echo $item['quantity'] <= 1 ? 'disabled' : ''; ?>>
-                                    <i class="fas fa-minus text-xs"></i>
-                                </button>
-                                <input type="text" value="<?php echo $item['quantity']; ?>" class="w-10 text-center text-sm font-bold text-slate-700 bg-transparent outline-none border-x border-slate-200 py-1" readonly>
-                                <button onclick="updateQty(<?php echo $item['cart_id']; ?>, <?php echo $item['quantity'] + 1; ?>)" class="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-white rounded-r-lg transition">
-                                    <i class="fas fa-plus text-xs"></i>
-                                </button>
+                <div class="w-full lg:w-96 flex-shrink-0 animate-enter" style="animation-delay: 0.2s">
+                    <div class="glass rounded-2xl p-6 sticky top-28">
+                        <h3 class="font-bold text-slate-800 text-lg mb-6">Ringkasan Belanja</h3>
+                        <div class="space-y-4 mb-6 border-b border-slate-100 pb-6">
+                            <div class="flex justify-between text-sm text-slate-600">
+                                <span>Total (<span id="total-qty">0</span> barang)</span>
+                                <span class="font-bold text-slate-800" id="subtotal-display">Rp 0</span>
                             </div>
                         </div>
-                    </div>
-                </div>
-                <?php endforeach; ?>
-            </div>
-
-            <div class="w-full lg:w-96 flex-shrink-0 animate-enter" style="animation-delay: 0.2s">
-                <div class="glass rounded-2xl p-6 sticky top-28">
-                    <h3 class="font-bold text-slate-800 text-lg mb-6">Ringkasan Belanja</h3>
-                    <div class="space-y-4 mb-6 border-b border-slate-100 pb-6">
-                        <div class="flex justify-between text-sm text-slate-600">
-                            <span>Total Harga</span>
-                            <span class="font-bold text-slate-800">Rp <?php echo number_format($subtotal, 0, ',', '.'); ?></span>
+                        <div class="flex justify-between items-center mb-8">
+                            <span class="font-bold text-slate-800 text-lg">Total Tagihan</span>
+                            <span class="font-extrabold text-blue-600 text-xl" id="total-display">Rp 0</span>
                         </div>
+                        <button type="submit" id="btn-checkout" class="w-full btn-primary text-white font-bold py-3.5 rounded-xl shadow-lg flex justify-center items-center gap-2 transition-all">
+                            Beli Sekarang <i class="fas fa-arrow-right"></i>
+                        </button>
                     </div>
-
-                    <div class="flex justify-between items-center mb-8">
-                        <span class="font-bold text-slate-800 text-lg">Total Tagihan</span>
-                        <span class="font-extrabold text-blue-600 text-xl">Rp <?php echo number_format($subtotal, 0, ',', '.'); ?></span>
-                    </div>
-
-                    <a href="checkout.php" class="w-full btn-primary text-white font-bold py-3.5 rounded-xl shadow-lg flex justify-center items-center gap-2">
-                        Beli (<?php echo count($cartItems); ?>) <i class="fas fa-arrow-right"></i>
-                    </a>
                 </div>
             </div>
-        </div>
+        </form>
         <?php else: ?>
             <div class="glass flex flex-col items-center justify-center py-20 text-center rounded-[2.5rem] border-dashed border-2 border-slate-300">
                 <div class="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mb-6 animate-bounce">
@@ -230,40 +221,64 @@ foreach($cartItems as $item) { $subtotal += ($item['harga'] * $item['quantity'])
             setTimeout(() => {
                 if (transitionEl) transitionEl.classList.add('page-loaded');
             }, 50);
-            const links = document.querySelectorAll('a');
-            links.forEach(link => {
-                link.addEventListener('click', function(e) {
-                    const href = this.getAttribute('href');
-                    const target = this.getAttribute('target');
-                    if (!href || href.startsWith('#') || href.startsWith('javascript') || target === '_blank') {
-                        return;
-                    }
-                    const currentUrl = new URL(window.location.href);
-                    const targetUrl = new URL(href, window.location.origin);
-                    if (currentUrl.pathname === targetUrl.pathname && currentUrl.origin === targetUrl.origin) {
-                        return;
-                    }
-                    e.preventDefault();
-                    transitionEl.classList.remove('page-loaded');
-                    setTimeout(() => {
-                        window.location.href = href;
-                    }, 500);
-                });
-            });
         });
 
         $(document).ready(function(){
             $('#navProfileTrigger').click(function(e){ e.stopPropagation(); $('#navProfileDropdown').slideToggle(150); $('#navChevron').toggleClass('rotate-180'); });
             $(document).click(function(){ $('#navProfileDropdown').slideUp(150); $('#navChevron').removeClass('rotate-180'); });
+
+            $('.btn-delete').click(function(e){
+                e.preventDefault();
+                let cartId = $(this).data('id');
+                Swal.fire({ title: 'Hapus?', text: "Barang akan dihapus dari keranjang.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#EF4444', confirmButtonText: 'Hapus' }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.post('../api/cart.php', { action: 'delete', cart_id: cartId }, function(res){
+                            if(res.status === 'success') location.reload();
+                        }, 'json');
+                    }
+                });
+            });
+
+            function calculateTotal() {
+                let total = 0;
+                let count = 0;
+                $('.check-item:checked').each(function() {
+                    let price = parseFloat($(this).data('price'));
+                    let qty = parseInt($(this).data('qty'));
+                    total += price * qty;
+                    count++;
+                });
+
+                let formatted = 'Rp ' + total.toLocaleString('id-ID');
+                $('#subtotal-display').text(formatted);
+                $('#total-display').text(formatted);
+                $('#total-qty').text(count);
+
+                if(count === 0) {
+                    $('#btn-checkout').prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
+                } else {
+                    $('#btn-checkout').prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
+                }
+            }
+
+            $('#checkAll').change(function() {
+                $('.check-item').prop('checked', $(this).prop('checked'));
+                calculateTotal();
+            });
+
+            $('.check-item').change(function() {
+                $('#checkAll').prop('checked', $('.check-item:checked').length === $('.check-item').length);
+                calculateTotal();
+            });
+
+            calculateTotal();
         });
+
         function updateQty(cartId, newQty) {
             if(newQty < 1) return;
             $.post('../api/cart.php', { action: 'update_qty', cart_id: cartId, quantity: newQty }, function(res){ if(res.status === 'success') location.reload(); }, 'json');
         }
-        function deleteItem(cartId) {
-            Swal.fire({ title: 'Hapus barang?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, Hapus', cancelButtonText: 'Batal' }).then((result) => { if (result.isConfirmed) { $.post('../api/cart.php', { action: 'delete', cart_id: cartId }, function(res){ if(res.status === 'success') location.reload(); }, 'json'); } });
-        }
-
+        
         function openTopUp() {
             Swal.fire({
                 title: 'Isi Saldo',

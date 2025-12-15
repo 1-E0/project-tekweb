@@ -5,9 +5,20 @@ require_once '../Controllers/CartController.php';
 
 if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit; }
 
+if (!isset($_POST['selected_items']) || empty($_POST['selected_items'])) {
+    echo "<script>alert('Pilih barang terlebih dahulu!'); window.location='cart.php';</script>";
+    exit;
+}
+
 $user_id = $_SESSION['user_id'];
+$selected_ids = $_POST['selected_items'];
+
 $cartObj = new CartController();
-$items = $cartObj->getCart($user_id);
+$all_items = $cartObj->getCart($user_id);
+
+$items = array_filter($all_items, function($item) use ($selected_ids) {
+    return in_array($item['cart_id'], $selected_ids);
+});
 
 if(empty($items)) { header("Location: cart.php"); exit; }
 
@@ -38,7 +49,7 @@ $grand_total = $total;
             <h3 class="font-bold mb-4 border-b pb-2">Rincian Pesanan</h3>
             <?php foreach($items as $item): ?>
             <div class="flex justify-between py-2 text-sm">
-                <span><?php echo $item['quantity']; ?>x <?php echo $item['nama_produk']; ?></span>
+                <span><?php echo $item['quantity']; ?>x <?php echo htmlspecialchars($item['nama_produk']); ?></span>
                 <span class="font-medium">Rp <?php echo number_format($item['harga'] * $item['quantity']); ?></span>
             </div>
             <?php endforeach; ?>
@@ -77,6 +88,8 @@ $grand_total = $total;
 
     <script>
     function processPay() {
+        let selectedItems = <?php echo json_encode(array_values($selected_ids)); ?>;
+
         Swal.fire({
             title: 'Konfirmasi Bayar',
             text: 'Saldo akan terpotong Rp <?php echo number_format($grand_total); ?>',
@@ -86,7 +99,10 @@ $grand_total = $total;
             confirmButtonColor: '#2563EB'
         }).then((res) => {
             if (res.isConfirmed) {
-                $.post('../api/order.php', { action: 'checkout' }, function(response) {
+                $.post('../api/order.php', { 
+                    action: 'checkout', 
+                    selected_items: selectedItems 
+                }, function(response) {
                     if (response.status === 'success') {
                         Swal.fire('Sukses!', 'Pembayaran berhasil.', 'success').then(() => {
                             window.location.href = '../index.php';

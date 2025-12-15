@@ -29,7 +29,7 @@ class OrderController {
 
                 if ($currentStock < $item['quantity']) {
                     $this->conn->rollBack();
-                    return json_encode(['status' => 'error', 'message' => 'Stok produk ' . $item['nama_produk'] . ' habis!']);
+                    return json_encode(['status' => 'error', 'message' => 'Stok produk ' . $item['nama_produk'] . ' habis/kurang!']);
                 }
             }
 
@@ -37,22 +37,33 @@ class OrderController {
             $stmtUpdate = $this->conn->prepare("UPDATE users SET balance = ? WHERE id = ?");
             $stmtUpdate->execute([$newBalance, $userId]);
 
-            $invoice = 'INV-' . time() . '-' . $userId;
+            $invoice = 'INV-' . time() . '-' . $userId . '-' . rand(100,999);
             $stmtOrder = $this->conn->prepare("INSERT INTO orders (user_id, invoice_number, total_harga, status, metode_pembayaran) VALUES (?, ?, ?, 'paid', 'saldo')");
             $stmtOrder->execute([$userId, $invoice, $total]);
             $orderId = $this->conn->lastInsertId();
 
             $stmtItem = $this->conn->prepare("INSERT INTO order_items (order_id, product_id, quantity, harga_satuan, subtotal) VALUES (?, ?, ?, ?, ?)");
             $stmtStock = $this->conn->prepare("UPDATE products SET stok = stok - ?, terjual = terjual + ? WHERE id = ?");
+            
+            $cartIdsToDelete = [];
 
             foreach ($items as $item) {
                 $subtotal = $item['harga'] * $item['quantity'];
                 $stmtItem->execute([$orderId, $item['product_id'], $item['quantity'], $item['harga'], $subtotal]);
                 $stmtStock->execute([$item['quantity'], $item['quantity'], $item['product_id']]);
+                
+                if(isset($item['cart_id'])) {
+                    $cartIdsToDelete[] = $item['cart_id'];
+                }
             }
 
-            $stmtCart = $this->conn->prepare("DELETE FROM cart WHERE user_id = ?");
-            $stmtCart->execute([$userId]);
+            if (!empty($cartIdsToDelete)) {
+                $placeholders = implode(',', array_fill(0, count($cartIdsToDelete), '?'));
+                $stmtCart = $this->conn->prepare("DELETE FROM cart WHERE id IN ($placeholders) AND user_id = ?");
+                
+                $params = array_merge($cartIdsToDelete, [$userId]);
+                $stmtCart->execute($params);
+            }
 
             $this->conn->commit();
             return json_encode(['status' => 'success', 'message' => 'Pembayaran Berhasil!']);
@@ -68,10 +79,7 @@ class OrderController {
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':status', $status);
         $stmt->bindParam(':id', $orderId);
-        
-        if($stmt->execute()) {
-            return json_encode(['status' => 'success', 'message' => 'Status pesanan diperbarui']);
-        }
+        if($stmt->execute()) return json_encode(['status' => 'success', 'message' => 'Status pesanan diperbarui']);
         return json_encode(['status' => 'error', 'message' => 'Gagal update status']);
     }
 

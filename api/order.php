@@ -13,20 +13,26 @@ $orderObj = new OrderController();
 
 if (isset($_POST['action']) && $_POST['action'] == 'checkout') {
     $userId = $_SESSION['user_id'];
+    $selectedIds = $_POST['selected_items'] ?? [];
+
     $cartObj = new CartController();
-    $cartItems = $cartObj->getCart($userId);
+    $allCartItems = $cartObj->getCart($userId);
     
-    if (empty($cartItems)) {
-        echo json_encode(['status' => 'error', 'message' => 'Keranjang kosong']);
+    $checkoutItems = array_filter($allCartItems, function($item) use ($selectedIds) {
+        return in_array($item['cart_id'], $selectedIds);
+    });
+
+    if (empty($checkoutItems)) {
+        echo json_encode(['status' => 'error', 'message' => 'Tidak ada barang yang dipilih/keranjang kosong']);
         exit;
     }
 
     $total = 0;
-    foreach($cartItems as $item) {
+    foreach($checkoutItems as $item) {
         $total += $item['harga'] * $item['quantity'];
     }
 
-    echo $orderObj->checkout($userId, $total, $cartItems);
+    echo $orderObj->checkout($userId, $total, $checkoutItems);
 }
 elseif (isset($_POST['action']) && $_POST['action'] == 'update_status') {
     echo $orderObj->updateStatus($_POST['order_id'], $_POST['status']);
